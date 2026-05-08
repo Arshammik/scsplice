@@ -1,5 +1,5 @@
 """splikit.io — readers for STARsolo / 10x output."""
 
-# v1.0 readers will be wired here once src/splikit/io/_starsolo.py lands.
+from splikit.io._starsolo import read_starsolo
 
-__all__: list[str] = []
+__all__ = ["read_starsolo"]
