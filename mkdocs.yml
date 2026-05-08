@@ -74,6 +74,9 @@ plugins:
             inherited_members: false
             filters:
               - "!^_"
+  - mkdocs-jupyter:
+      include_source: true
+      execute: false
 
 markdown_extensions:
   - admonition
@@ -107,6 +110,7 @@ nav:
   - Getting started: getting-started.md
   - Tutorials:
     - tutorials/index.md
+    - Quickstart: tutorials/quickstart.ipynb
   - How-to guides:
     - Recompute M2 after subsetting: how-to/recompute-m2-after-subsetting.md
     - Multi-sample ingestion: how-to/multi-sample-ingestion.md

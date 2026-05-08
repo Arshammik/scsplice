@@ -32,6 +32,16 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install eigen libomp
 
+      - name: Set OpenMP env (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          LIBOMP_PREFIX="$(brew --prefix libomp)"
+          {
+            echo "OpenMP_ROOT=${LIBOMP_PREFIX}"
+            echo "LDFLAGS=-L${LIBOMP_PREFIX}/lib"
+            echo "CPPFLAGS=-I${LIBOMP_PREFIX}/include"
+          } >> "$GITHUB_ENV"
+
       - name: Install package + test deps
         run: |
           python -m pip install --upgrade pip

@@ -11,10 +11,11 @@ Public API surface (v1.0):
 from importlib.metadata import PackageNotFoundError, version
 
 from . import io, pl, pp, tl
+from ._settings import settings
 
 try:
     __version__ = version("splikit-py")
 except PackageNotFoundError:
     __version__ = "0.0.0+unknown"
 
-__all__ = ["__version__", "io", "pl", "pp", "tl"]
+__all__ = ["__version__", "io", "pl", "pp", "tl", "settings"]
