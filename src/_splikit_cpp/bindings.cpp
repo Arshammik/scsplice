@@ -8,6 +8,7 @@
 
 #include "deviance.hpp"
 #include "make_m2.hpp"
+#include "pseudo_r2.hpp"
 
 namespace py = pybind11;
 
@@ -28,5 +29,12 @@ PYBIND11_MODULE(_splikit_cpp, m) {
     m.def("calc_deviances_ratio", &splikit::calc_deviances_ratio,
           py::arg("M1"), py::arg("M2"), py::arg("n_threads") = 1,
           "Per-event ratio binomial deviance for one library (M1 + M2 sub-matrices).",
+          py::call_guard<py::gil_scoped_release>());
+
+    m.def("pseudo_correlation", &splikit::pseudo_correlation,
+          py::arg("Z"), py::arg("M1"), py::arg("M2"), py::arg("metric"),
+          py::arg("n_threads") = 1,
+          "Per-event signed pseudo-correlation (Cox-Snell or Nagelkerke) via "
+          "logistic IRLS. Returns one scalar per event in [-1, 1] or NaN.",
           py::call_guard<py::gil_scoped_release>());
 }
