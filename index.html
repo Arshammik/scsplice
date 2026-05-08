@@ -990,8 +990,6 @@
       
         
       
-        
-      
     
     
     
@@ -1052,34 +1050,6 @@
     
   
     Data model
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="explanation/numerical-equivalence/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Numerical equivalence
   
 
     
@@ -1310,7 +1280,7 @@
 <h2 id="design-principles">Design principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>AnnData-native.</strong> Junctions are <code>var</code>, cells are <code>obs</code>, M1 and M2 are <code>layers</code>. No custom objects — <code>scanpy</code>, <code>scvi-tools</code>, and the rest of the ecosystem work on the output without adapters.</li>
-<li><strong>Bit-exact parity with R splikit.</strong> M2 is bit-identical; HVE deviance agrees to <code>rtol=1e-10</code>; pseudo-correlation agrees to <code>rtol=1e-7</code>. See <a href="explanation/numerical-equivalence/">Numerical equivalence</a>.</li>
+<li><strong>Bit-exact parity with R splikit.</strong> M2 is bit-identical; HVE deviance agrees to <code>rtol=1e-10</code>; pseudo-correlation agrees to <code>rtol=1e-7</code>. The cross-language regression suite lives on the <a href="https://github.com/Arshammik/splikitpy/tree/validation"><code>validation</code> branch</a>.</li>
 <li><strong>Two C++ kernels, one thin Python layer.</strong> <code>make_m2</code> and <code>highly_variable_events</code> delegate to pybind11-wrapped Eigen kernels; the Python layer handles validation, AnnData conventions, and dispatch only.</li>
 <li><strong>Intentionally narrow scope.</strong> HVG, plotting, and silhouette utilities are not included — <code>scanpy</code>, <code>pyranges</code>, and <code>sklearn</code> already cover those.</li>
 </ul>
