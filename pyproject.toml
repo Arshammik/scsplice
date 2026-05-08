@@ -38,9 +38,6 @@ test = [
     "pytest-cov",
     "pytest-xdist",
 ]
-r-equivalence = [
-    "rpy2>=3.5",
-]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
@@ -85,7 +82,6 @@ minversion = "8.0"
 testpaths = ["tests"]
 markers = [
     "slow: long-running tests (>30s)",
-    "r_required: requires R + rpy2 to regenerate reference fixtures",
     "openmp: requires OpenMP-enabled build",
 ]
 

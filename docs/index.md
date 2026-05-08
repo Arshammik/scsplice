@@ -42,7 +42,7 @@ See [Getting started](getting-started.md) for the full install and walkthrough.
 ## Design principles
 
 - **AnnData-native.** Junctions are `var`, cells are `obs`, M1 and M2 are `layers`. No custom objects — `scanpy`, `scvi-tools`, and the rest of the ecosystem work on the output without adapters.
-- **Bit-exact parity with R splikit.** M2 is bit-identical; HVE deviance agrees to `rtol=1e-10`; pseudo-correlation agrees to `rtol=1e-7`. See [Numerical equivalence](explanation/numerical-equivalence.md).
+- **Bit-exact parity with R splikit.** M2 is bit-identical; HVE deviance agrees to `rtol=1e-10`; pseudo-correlation agrees to `rtol=1e-7`. The cross-language regression suite lives on the [`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
 - **Two C++ kernels, one thin Python layer.** `make_m2` and `highly_variable_events` delegate to pybind11-wrapped Eigen kernels; the Python layer handles validation, AnnData conventions, and dispatch only.
 - **Intentionally narrow scope.** HVG, plotting, and silhouette utilities are not included — `scanpy`, `pyranges`, and `sklearn` already cover those.
 

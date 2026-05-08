@@ -15,11 +15,61 @@ Pre-alpha. v1.0 scope is intentionally narrow:
 
 HVG, plotting, and silhouette utilities from the R package are intentionally omitted — `scanpy`, `pyranges`, and `sklearn` already cover those.
 
-## Install (once published)
+## Installation
+
+`splikit-py` ships a C++ extension built via `scikit-build-core` + `pybind11`.
+Eigen3 (header-only) is required at install time; OpenMP is optional but
+strongly recommended for multi-threaded kernels.
+
+### From PyPI (once v1.0 is published)
 
 ```bash
 pip install splikit-py
 ```
+
+### From source
+
+```bash
+git clone https://github.com/Arshammik/splikitpy
+cd splikitpy
+pip install .
+```
+
+System dependencies before running `pip install`:
+
+**Ubuntu / Debian**
+
+```bash
+sudo apt install libeigen3-dev libomp-dev
+```
+
+**macOS** (Homebrew)
+
+```bash
+brew install eigen libomp
+# tell CMake where Apple Clang's OpenMP lives
+export OpenMP_ROOT="$(brew --prefix libomp)"
+export LDFLAGS="-L${OpenMP_ROOT}/lib"
+export CPPFLAGS="-I${OpenMP_ROOT}/include"
+```
+
+**HPC cluster (Compute Canada / Sharcnet pattern)**
+
+```bash
+module load eigen/3.4.0
+# any modern GCC with OpenMP (gcc/12+) on the system module path
+```
+
+### Editable install (development)
+
+```bash
+pip install -e ".[dev]"
+```
+
+This installs the package, all test dependencies, the docs toolchain
+(`mkdocs-material`, `mkdocstrings[python]`, `mkdocs-jupyter`), and `ruff` /
+`pre-commit`. C++ edits require re-running `pip install -e .`; pure-Python
+edits take effect immediately.
 
 ## Quick start
 
@@ -40,7 +90,11 @@ splk.pp.highly_variable_events(adata, min_row_sum=50, n_threads=8)
 
 ## Numerical equivalence
 
-`splikit-py` reproduces R `splikit` results to a documented tolerance on a fixed reference dataset; see `tests/test_*_vs_r.py` and `tests/r_export/export_reference.R` for the regression protocol.
+`splikit-py` reproduces R `splikit` results to a documented tolerance on a
+fixed reference dataset (M2 bit-exact; HVE deviance `rtol=1e-10`;
+pseudo-correlation `rtol=1e-7`). The cross-language regression suite,
+R reference fixtures, and end-to-end M1/M2 validation pipeline live on the
+[`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
 
 ## License
 

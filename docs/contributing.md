@@ -20,18 +20,17 @@ The `scikit-build-core` backend compiles the C++ extension during `pip install`.
 ## Running the tests
 
 ```bash
-# All tests (skips r_required and openmp by default if markers not satisfied)
+# All tests (skips openmp tests if the build lacks OpenMP)
 pytest
 
 # With coverage
 pytest --cov=splikit --cov-report=term-missing
 
-# Cross-language equivalence tests (require R + rpy2 to regenerate fixtures)
-pytest -m r_required -v
-
 # Fast subset only
 pytest tests/ -k "not slow" -v
 ```
+
+For cross-language equivalence regression against R splikit, see the [`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
 
 ## Building the docs locally
 
@@ -66,10 +65,13 @@ src/splikit/
   _splikit_cpp (pybind11 extension, built from src/cpp/)
 tests/
   test_make_m2.py
-  test_hve.py
+  test_highly_variable_events.py
   test_pseudo_correlation.py
-  test_r_equivalence_real.py   (requires r_reference_merfish.h5)
-  r_export/                    R scripts that generate reference fixtures
+  test_read_starsolo.py
+  test_settings.py
+  test_smoke.py
+  test_split.py
+  test_validators.py
 docs/
   api/         auto-generated from docstrings via mkdocstrings
   tutorials/   hand-written notebooks
