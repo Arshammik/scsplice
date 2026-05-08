@@ -201,15 +201,65 @@ def test_pseudo_correlation_inplace_vs_copy():
 
 @pytest.mark.r_required
 @pytest.mark.slow
-def test_pseudo_correlation_vs_r(r_reference_path: Path):
-    """Cross-language tolerance check; skipped until the R fixture exports
-    a reference pseudo-correlation vector + the deterministic Z draw."""
+@pytest.mark.parametrize("metric", ["CoxSnell", "Nagelkerke"])
+def test_pseudo_correlation_vs_r(r_reference_path: Path, metric: str):
+    """splk.tl.pseudo_correlation vs R splikit::get_pseudo_correlation on the toy.
+
+    Z is the R-side deterministic draw stored in the fixture (set.seed(42);
+    rnorm(...)). We never re-RNG on the Python side because R MT and numpy
+    PCG64 streams diverge from the same seed.
+
+    Tolerance: rtol=1e-7, atol=1e-9 + exact NaN-mask, the IRLS-path-divergence band.
+    """
     if not r_reference_path.exists():
         pytest.skip(
             f"R reference fixture not found at {r_reference_path}. "
             "Regenerate via Rscript tests/r_export/export_reference.R"
         )
-    pytest.skip(
-        "test_pseudo_correlation_vs_r awaits export_reference.R extension to "
-        "dump a fixed Z draw and the R-side pseudo_correlation result."
+
+    from tests.load_r_ref import load_reference  # noqa: PLC0415
+    from tests.test_make_m2 import _build_adata_from_toy_ref  # noqa: PLC0415
+    import splikit  # noqa: PLC0415
+
+    ref = load_reference(r_reference_path)
+    if ref.pcor_zdb is None or ref.pcor_coxsnell is None:
+        pytest.skip(
+            "Loaded R fixture is missing pseudo_correlation/{zdb,coxsnell,nagelkerke}. "
+            "Regenerate via Rscript tests/r_export/export_reference.R."
+        )
+
+    adata = _build_adata_from_toy_ref(ref)
+    splikit.tl.make_m2(adata, n_threads=1)
+
+    zdb = ref.pcor_zdb.astype(np.float64)
+    assert zdb.shape == (adata.n_vars, adata.n_obs), (
+        f"ZDB shape {zdb.shape} != (n_var={adata.n_vars}, n_obs={adata.n_obs})"
     )
+
+    splikit.tl.pseudo_correlation(adata, zdb, metric=metric, n_threads=1)
+
+    py = adata.var["pseudo_correlation"].to_numpy()
+    r = (ref.pcor_coxsnell if metric == "CoxSnell" else ref.pcor_nagelkerke)
+
+    if not np.array_equal(np.isnan(py), np.isnan(r)):
+        py_nan = int(np.isnan(py).sum())
+        r_nan = int(np.isnan(r).sum())
+        diff_idx = np.where(np.isnan(py) != np.isnan(r))[0][:5]
+        raise AssertionError(
+            f"NaN masks differ ({py_nan} vs {r_nan}); first divergent indices "
+            f"{diff_idx.tolist()}: py={py[diff_idx]!r}, r={r[diff_idx]!r}"
+        )
+
+    valid = np.isfinite(py) & np.isfinite(r)
+    if not valid.any():
+        pytest.skip("No event has a valid pseudo-correlation in either impl.")
+    if not np.allclose(py[valid], r[valid], rtol=1e-7, atol=1e-9):
+        diff = np.abs(py[valid] - r[valid])
+        idx = int(np.argmax(diff))
+        valid_idx = np.where(valid)[0]
+        abs_idx = int(valid_idx[idx])
+        raise AssertionError(
+            f"pseudo_correlation ({metric}) differs beyond rtol=1e-7/atol=1e-9. "
+            f"Max abs diff {diff[idx]:.3e} at event index {abs_idx}: "
+            f"py={py[abs_idx]!r}, r={r[abs_idx]!r}"
+        )

@@ -210,9 +210,11 @@ def test_hve_p_hat_clamp_zero_row_returns_zero_deviance():
 @pytest.mark.r_required
 @pytest.mark.slow
 def test_hve_vs_r(r_reference_path: Path):
-    """Cross-language tolerance check; runs only when the R fixture exists.
+    """splk.pp.highly_variable_events vs R splikit::find_variable_events on the toy.
 
-    Tolerance is np.allclose(rtol=1e-12, atol=1e-15) — log() prevents bit-exact.
+    Tolerance: rtol=1e-10, atol=1e-12 on per-event sum_deviance, NaN-mask exact.
+    The kernel is per-row independent (no cross-row reduction); drift comes
+    only from std::log differences across libm / SIMD vectorisation paths.
     """
     if not r_reference_path.exists():
         pytest.skip(
@@ -220,7 +222,59 @@ def test_hve_vs_r(r_reference_path: Path):
             "Regenerate via Rscript tests/r_export/export_reference.R"
         )
 
-    pytest.skip(
-        "test_hve_vs_r awaits export_reference.R extension to dump per-library "
-        "deviance vectors and a single sum_deviance reference. Not in v1.0 fixture."
+    from tests.load_r_ref import load_reference  # noqa: PLC0415
+    from tests.test_make_m2 import _build_adata_from_toy_ref  # noqa: PLC0415
+    import splikit  # noqa: PLC0415
+
+    ref = load_reference(r_reference_path)
+    if ref.hve_events is None:
+        pytest.skip(
+            "Loaded R fixture is missing find_variable_events/sum_deviance. "
+            "Regenerate via Rscript tests/r_export/export_reference.R."
+        )
+
+    adata = _build_adata_from_toy_ref(ref)
+    splikit.tl.make_m2(adata, n_threads=1)
+    splikit.pp.highly_variable_events(
+        adata, min_row_sum=ref.min_row_sum, n_threads=1
     )
+
+    # Map R-kept events back to Python's full-length output.
+    py_dev = adata.var["sum_deviance"].to_numpy()
+    py_event_id = adata.var.index.to_numpy()
+    r_event_id = ref.hve_events
+    r_dev = ref.hve_sum_deviance
+
+    py_index = pd.Index(py_event_id)
+    matched = py_index.get_indexer(r_event_id)
+    if (matched < 0).any():
+        # The toy fixture stores R's `events` column verbatim; if R suffixed
+        # them differently from our var_names, retry against the un-suffixed
+        # row_names_mtx.
+        bare_index = pd.Index(adata.var["row_names_mtx"].to_numpy())
+        matched_bare = bare_index.get_indexer(r_event_id)
+        if (matched_bare >= 0).all():
+            matched = matched_bare
+        else:
+            missing = r_event_id[matched < 0][:5]
+            raise AssertionError(
+                f"R-kept events not found in Python output (sample): {missing}"
+            )
+    py_dev_matched = py_dev[matched]
+
+    valid = np.isfinite(r_dev) & np.isfinite(py_dev_matched)
+    if not np.array_equal(np.isnan(py_dev_matched), np.isnan(r_dev)):
+        bad = int(np.argmax(np.isnan(py_dev_matched) != np.isnan(r_dev)))
+        raise AssertionError(
+            f"NaN mask differs at event {r_event_id[bad]!r}: "
+            f"py={py_dev_matched[bad]!r}, r={r_dev[bad]!r}"
+        )
+    if not np.allclose(py_dev_matched[valid], r_dev[valid],
+                       rtol=1e-10, atol=1e-12):
+        diff = np.abs(py_dev_matched[valid] - r_dev[valid])
+        idx = int(np.argmax(diff))
+        raise AssertionError(
+            f"sum_deviance differs beyond rtol=1e-10/atol=1e-12. Max abs diff "
+            f"{diff[idx]:.3e} at event {r_event_id[valid][idx]!r}: "
+            f"py={py_dev_matched[valid][idx]!r}, r={r_dev[valid][idx]!r}."
+        )

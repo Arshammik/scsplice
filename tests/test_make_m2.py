@@ -11,6 +11,9 @@ The R-equivalence test is gated behind pytest.mark.r_required and skipped when
 tests/data/r_reference.h5 is missing. Regenerate with:
 
     Rscript tests/r_export/export_reference.R tests/data/r_reference.h5
+
+The ``_build_adata_from_toy_ref`` helper is shared with the R-equivalence
+tests in ``test_highly_variable_events.py`` and ``test_pseudo_correlation.py``.
 """
 
 from __future__ import annotations
@@ -23,6 +26,82 @@ import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
+
+
+def _build_adata_from_toy_ref(ref) -> ad.AnnData:
+    """Build a splicing AnnData from a toy ``RReference`` object.
+
+    Strips any trailing ``_S`` / ``_E`` suffix from ``row_names_mtx`` (the toy
+    R fixture stores the suffixed name there) and uses it for the un-suffixed
+    ``var["row_names_mtx"]`` column; the suffix goes into ``var_names``.
+    """
+    M1_T = ref.m1.T.tocsc().astype(np.float64)
+    n_cells, n_events = M1_T.shape
+
+    raw = np.asarray(ref.row_names_mtx)
+    bare = np.array(
+        [n[:-2] if (n.endswith("_S") or n.endswith("_E")) else n for n in raw]
+    )
+    # Recover or accept the kind: trust ref.group_kind first; fall back to the
+    # suffix on raw if the fixture defaulted everything to "S".
+    kinds = np.asarray(ref.group_kind).astype(str)
+    suffix_kind = np.array(
+        [n[-1] if n.endswith(("_S", "_E")) else "S" for n in raw]
+    )
+    if (kinds == "S").all() and (suffix_kind == "E").any():
+        kinds = suffix_kind
+    var_names = pd.Index(
+        [f"{n}_{k}" for n, k in zip(bare, kinds, strict=True)]
+    )
+    if not var_names.is_unique:
+        # The toy fixture may already include the suffix in row_names_mtx,
+        # in which case `raw` itself is unique and we use it directly.
+        var_names = pd.Index(raw)
+
+    var = pd.DataFrame(
+        {
+            "chr": pd.Categorical(
+                ref.chr_arr.astype(str) if ref.chr_arr is not None
+                else np.array(["chr0"] * n_events)
+            ),
+            "start": (ref.start.astype(np.int64) if ref.start is not None
+                      else np.arange(n_events, dtype=np.int64)),
+            "end": (ref.end.astype(np.int64) if ref.end is not None
+                    else np.arange(n_events, dtype=np.int64) + 1),
+            "strand": pd.Categorical(
+                ref.strand.astype(str) if ref.strand is not None
+                else np.array(["+"] * n_events),
+                categories=[".", "+", "-", "*"],
+            ),
+            "row_names_mtx": bare,
+            "group_id": ref.group_id.astype(np.int32),
+            "group_kind": pd.Categorical(kinds, categories=["S", "E"]),
+            "group_count": ref.group_count.astype(np.int32),
+        },
+        index=var_names,
+    )
+    if ref.obs_names is not None and ref.sample_ids is not None:
+        obs_idx = np.asarray(ref.obs_names).astype(str)
+        sample_id = np.asarray(ref.sample_ids).astype(str)
+        # Recover the bare barcode (everything before the last '-{sample_id}').
+        barcode = np.array(
+            [n[: -(len(s) + 1)] if n.endswith(f"-{s}") else n
+             for n, s in zip(obs_idx, sample_id)]
+        )
+        obs = pd.DataFrame(
+            {"barcode": barcode, "sample_id": sample_id},
+            index=pd.Index(obs_idx),
+        )
+    else:
+        obs = pd.DataFrame(
+            {"barcode": [f"bc{i}" for i in range(n_cells)],
+             "sample_id": ["s1"] * n_cells},
+            index=[f"bc{i}-s1" for i in range(n_cells)],
+        )
+    obs["sample_id"] = obs["sample_id"].astype("category")
+    a = ad.AnnData(layers={"M1": M1_T}, obs=obs, var=var)
+    a.uns["splikit"] = {"version": 1, "m2_valid": False, "ljv_kind": "start_end"}
+    return a
 
 
 def _openmp_enabled() -> bool:
@@ -146,45 +225,11 @@ def test_make_m2_bit_exact_vs_r(r_reference_path: Path):
     import splikit  # noqa: PLC0415
 
     ref = load_reference(r_reference_path)
-
-    # R reference is events x cells; AnnData is cells x events. Transpose.
-    M1_T = ref.m1.T.tocsc().astype(np.float64)
-    n_cells, n_events = M1_T.shape
-
-    var = pd.DataFrame(
-        {
-            "chr": pd.Categorical(
-                ref.chr_arr.astype(str) if ref.chr_arr is not None
-                else np.array(["chr0"] * n_events)
-            ),
-            "start": (ref.start.astype(np.int64) if ref.start is not None
-                      else np.arange(n_events, dtype=np.int64)),
-            "end": (ref.end.astype(np.int64) if ref.end is not None
-                    else np.arange(n_events, dtype=np.int64) + 1),
-            "strand": pd.Categorical(
-                ref.strand.astype(str) if ref.strand is not None
-                else np.array(["+"] * n_events)
-            ),
-            "row_names_mtx": ref.row_names_mtx,
-            "group_id": ref.group_id.astype(np.int32),
-            "group_kind": pd.Categorical(ref.group_kind, categories=["S", "E"]),
-            "group_count": ref.group_count.astype(np.int32),
-        },
-        index=[f"{name}_{kind}" for name, kind in
-               zip(ref.row_names_mtx, ref.group_kind, strict=False)],
-    )
-    obs = pd.DataFrame(
-        {"barcode": [f"bc{i}" for i in range(n_cells)],
-         "sample_id": ["s1"] * n_cells},
-        index=[f"bc{i}-s1" for i in range(n_cells)],
-    )
-    adata = ad.AnnData(layers={"M1": M1_T}, obs=obs, var=var)
-    adata.uns["splikit"] = {"m2_valid": False}
-
+    adata = _build_adata_from_toy_ref(ref)
+    M2_r = ref.m2.tocsc()
     splikit.tl.make_m2(adata, n_threads=1)
 
     M2_py = adata.layers["M2"].T.tocsc()
-    M2_r = ref.m2.tocsc()
 
     indptr_eq = np.array_equal(M2_py.indptr, M2_r.indptr)
     indices_eq = np.array_equal(M2_py.indices, M2_r.indices)

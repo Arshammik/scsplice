@@ -33,10 +33,25 @@ class RReference:
     start: np.ndarray | None
     end: np.ndarray | None
     strand: np.ndarray | None
+
+    # Optional reference outputs (None on older fixtures that don't carry them).
+    hve_events: np.ndarray | None
+    hve_sum_deviance: np.ndarray | None
+    pcor_events: np.ndarray | None
+    pcor_coxsnell: np.ndarray | None
+    pcor_nagelkerke: np.ndarray | None
+    pcor_zdb: np.ndarray | None  # events × cells, dense float64
+
+    # Optional obs (barcode + sample_id via R's `^.{16}-(.*$)` regex).
+    obs_names: np.ndarray | None
+    sample_ids: np.ndarray | None
+
     splikit_version: str
     r_version: str
     generated_at: str
     blas_vendor: str
+    min_row_sum: int
+    zdb_seed: int
 
 
 @dataclass(frozen=True)
@@ -210,6 +225,38 @@ def load_reference(path: str | Path) -> RReference:
         start = _maybe_array(ed, "start")
         end = _maybe_array(ed, "end")
         strand = _maybe_array(ed, "strand")
+
+        # Optional kernel-reference outputs (HVE + pseudo_correlation + Z draw).
+        hve_events: np.ndarray | None = None
+        hve_sum_deviance: np.ndarray | None = None
+        pcor_events: np.ndarray | None = None
+        pcor_coxsnell: np.ndarray | None = None
+        pcor_nagelkerke: np.ndarray | None = None
+        pcor_zdb: np.ndarray | None = None
+        if "find_variable_events" in f:
+            hve_grp = f["find_variable_events"]
+            hve_events = _decode_strings(hve_grp["events"][:])
+            hve_sum_deviance = np.asarray(
+                hve_grp["sum_deviance"][:], dtype=np.float64
+            )
+        obs_names: np.ndarray | None = None
+        sample_ids: np.ndarray | None = None
+        if "obs" in f:
+            obs_grp = f["obs"]
+            if "obs_names" in obs_grp:
+                obs_names = _decode_strings(obs_grp["obs_names"][:])
+            if "sample_id" in obs_grp:
+                sample_ids = _decode_strings(obs_grp["sample_id"][:])
+        if "pseudo_correlation" in f:
+            pc = f["pseudo_correlation"]
+            pcor_events = _decode_strings(pc["events"][:])
+            pcor_coxsnell = np.asarray(pc["coxsnell"][:], dtype=np.float64)
+            pcor_nagelkerke = np.asarray(pc["nagelkerke"][:], dtype=np.float64)
+            zdb_flat = np.asarray(pc["zdb"][:], dtype=np.float64)
+            zdb_shape = tuple(int(x) for x in pc["zdb_shape"][:])
+            # rhdf5 flattens dense matrices column-major; reshape order='F'.
+            pcor_zdb = np.ascontiguousarray(zdb_flat.reshape(zdb_shape, order="F"))
+
         return RReference(
             m1=m1,
             m2=m2,
@@ -221,8 +268,18 @@ def load_reference(path: str | Path) -> RReference:
             start=start,
             end=end,
             strand=strand,
+            hve_events=hve_events,
+            hve_sum_deviance=hve_sum_deviance,
+            pcor_events=pcor_events,
+            pcor_coxsnell=pcor_coxsnell,
+            pcor_nagelkerke=pcor_nagelkerke,
+            pcor_zdb=pcor_zdb,
+            obs_names=obs_names,
+            sample_ids=sample_ids,
             splikit_version=_read_attr(f, "splikit_version"),
             r_version=_read_attr(f, "r_version"),
             generated_at=_read_attr(f, "generated_at"),
             blas_vendor=_read_attr(f, "blas_vendor"),
+            min_row_sum=_read_attr_int(f, "min_row_sum", 50),
+            zdb_seed=_read_attr_int(f, "zdb_seed", 42),
         )
