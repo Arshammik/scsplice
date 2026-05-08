@@ -111,6 +111,7 @@ def test_input_layout_matches_gedi2py_contract(adata_full):
 
 
 @pytest.mark.xfail(
+    run=False,
     reason=(
         "gedi2py's Python wrapper (_model.py:315) calls "
         "self._cpp_model.set_M1i_M2i(M1i, M2i) for M_paired mode, but the "
@@ -121,13 +122,17 @@ def test_input_layout_matches_gedi2py_contract(adata_full):
         "dispatch, layer reads, batch_key categorical handling) matches. "
         "See test_multigedipy_runs_on_splikit_output for the working "
         "demonstration that splikit-py is seamless with the M_paired "
-        "family on the implementation that actually has the binding."
+        "family on the implementation that actually has the binding. "
+        "run=False because gedi2py and multigedipy_pkg both register a "
+        "C++ class named 'GEDI' via pybind11 — importing gedi2py in the "
+        "same process as multigedipy raises 'generic_type: type GEDI is "
+        "already registered'. Keeping the xfail body un-executed lets us "
+        "document the finding without poisoning the multigedipy test."
     ),
-    strict=True,
 )
 def test_gedi2py_runs_on_splikit_output(adata_filtered):
-    """gedi2py M_paired integration. xfailed pending the missing C++ binding."""
-    pytest.importorskip("gedi2py")
+    """gedi2py M_paired integration. xfailed without running because of the
+    C++ binding gap in gedi2py's pybind11 module — see decorator reason."""
     import gedi2py as gd  # noqa: PLC0415
 
     gd.tl.gedi(
