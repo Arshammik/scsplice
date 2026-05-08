@@ -83,6 +83,7 @@ testpaths = ["tests"]
 markers = [
     "slow: long-running tests (>30s)",
     "openmp: requires OpenMP-enabled build",
+    "real_data: requires real STARsolo output on disk; auto-skipped when path is absent",
 ]
 
 [tool.ruff]

@@ -2,11 +2,53 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
+
+
+# Real-data sandbox path; tests gated by @pytest.mark.real_data are
+# auto-skipped when the path does not exist. Override with the env var
+# ``SPLIKIT_REAL_DATA_DIR`` if your local copy lives elsewhere.
+_REAL_DATA_DIR = Path(
+    os.environ.get(
+        "SPLIKIT_REAL_DATA_DIR",
+        "/home/arsham79/projects/rrg-hsn/arsham79/alt_splicing/results/star_solo_out",
+    )
+).expanduser()
+_REAL_DATA_SAMPLES = (
+    "L8TX_181211_01_A01_S01_L003",
+    "L8TX_181211_01_B01_S01_L003",
+)
+
+
+@pytest.fixture(scope="session")
+def real_data_dir() -> Path:
+    if not _REAL_DATA_DIR.is_dir():
+        pytest.skip(
+            f"Real-data sandbox not present at {_REAL_DATA_DIR}; set "
+            "SPLIKIT_REAL_DATA_DIR or skip @pytest.mark.real_data tests."
+        )
+    return _REAL_DATA_DIR
+
+
+@pytest.fixture(scope="session")
+def real_data_samples(real_data_dir: Path) -> list[Path]:
+    paths = [real_data_dir / s for s in _REAL_DATA_SAMPLES]
+    missing = [str(p) for p in paths if not p.is_dir()]
+    if missing:
+        pytest.skip(f"Real-data samples missing: {missing}")
+    return paths
+
+
+@pytest.fixture(scope="session")
+def real_data_sample_ids() -> list[str]:
+    return list(_REAL_DATA_SAMPLES)
 
 
 @pytest.fixture

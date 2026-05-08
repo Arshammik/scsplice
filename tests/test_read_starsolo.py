@@ -354,6 +354,67 @@ def test_read_starsolo_ljv_kind_modes(tmp_path):
     assert a_e.n_vars == 2 and (a_e.var["group_kind"].astype(str) == "E").all()
 
 
+def test_read_starsolo_tissue_positions_squidpy_fields(tmp_path):
+    """The SJ reader inherits the same tissue_positions / spatial_library_ids API."""
+    import splikit  # noqa: PLC0415
+
+    junctions = [
+        ("chr1", 100, 200, 1, 1, 1, 5),
+        ("chr1", 100, 300, 1, 1, 0, 4),
+    ]
+    sj_dir = _make_starsolo_dir(
+        tmp_path / "s1", junctions,
+        ["BC1", "BC2", "BC3"],
+        np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64),
+    )
+    tp = tmp_path / "tissue_positions.csv"
+    tp.write_text(
+        "barcode,in_tissue,array_row,array_col,pxl_row_in_fullres,pxl_col_in_fullres\n"
+        "BC1,1,0,0,10.0,20.0\n"
+        "BC3,1,2,2,30.0,40.0\n"
+    )
+    a = splikit.io.read_starsolo(
+        sj_dir, "s1",
+        tissue_positions=[tp],
+        spatial_library_ids=["lib_sj"],
+        use_internal_whitelist=False,
+    )
+    assert a.n_obs == 2
+    assert "spatial" in a.obsm
+    assert a.obsm["spatial"].shape == (2, 2)
+    assert a.uns["spatial"]["lib_sj"]["metadata"]["source"] == "starsolo+tissue_positions"
+
+
+@pytest.mark.real_data
+def test_read_starsolo_real_refactor_parity(real_data_samples, real_data_sample_ids):
+    """Whitelist refactor must be a no-op when neither new kwarg is used.
+
+    We can't compare against the pre-refactor reader directly (it's gone),
+    but we can assert internal invariants on the real-data output: the
+    splicing AnnData schema matches the validators, both samples are present,
+    and obs_names / var_names are well-formed.
+    """
+    import splikit  # noqa: PLC0415
+
+    sj_dirs = [s / "Solo.out" / "SJ" for s in real_data_samples]
+    a = splikit.io.read_starsolo(
+        sj_dirs, real_data_sample_ids,
+        # Same as the pre-refactor default: no spatial / no explicit WL.
+        use_internal_whitelist=True, keep_multi_mapped=False,
+    )
+    assert set(a.obs["sample_id"].astype(str).unique()) == set(real_data_sample_ids)
+    # var_names suffix invariant.
+    assert a.var_names.is_unique
+    assert all(n.endswith("_S") or n.endswith("_E") for n in a.var_names)
+    # M1 schema.
+    M1 = a.layers["M1"]
+    assert M1.dtype == np.float64
+    assert sp.issparse(M1) and M1.format == "csc"
+    # No tissue_positions → no obsm/uns spatial.
+    assert "spatial" not in a.obsm
+    assert "spatial" not in a.uns
+
+
 def test_read_starsolo_end_to_end_pipeline(tmp_path):
     """Full v1.0 pipeline: read_starsolo → make_m2 → highly_variable_events."""
     import splikit  # noqa: PLC0415

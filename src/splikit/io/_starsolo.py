@@ -40,6 +40,11 @@ from splikit._core._validators import (
     validate_m1_layer,
     validate_var_schema,
 )
+from splikit.io._whitelist import (
+    ResolvedWhitelist,
+    normalize_per_sample_arg,
+    resolve_whitelist,
+)
 
 
 __all__ = ["read_starsolo"]
@@ -62,6 +67,9 @@ class _SampleArtifacts:
     features: pd.DataFrame  # one row per junction in this sample (post-filter)
     barcodes: np.ndarray  # raw 16-mers, length n_cells_kept
     mtx: sp.csc_matrix  # junctions × cells_kept, float64
+    spatial: pd.DataFrame | None = None  # aligned to barcodes, when tissue_positions
+    library_id: str | None = None
+    whitelist_source: str = "none"
 
 
 def _resolve_sj_paths(sj_dir: str | Path) -> _SJPaths:
@@ -112,8 +120,10 @@ def _read_one_sample(
     sample_id: str,
     *,
     keep_multi_mapped: bool,
-    whitelist: Sequence[str] | None,
+    barcode_whitelist,
+    tissue_positions,
     use_internal_whitelist: bool,
+    spatial_library_id: str | None,
     verbose: bool,
 ) -> _SampleArtifacts:
     """Read one STARsolo SJ sample, apply per-sample filters, decode strand."""
@@ -178,24 +188,16 @@ def _read_one_sample(
         mtx = mtx[keep_jx, :]
         features = features.loc[keep_jx].reset_index(drop=True)
 
-    # Barcode whitelist (raw 16-mers, before any sample_id suffix).
-    wl_set: set[str] | None = None
-    if whitelist is not None:
-        wl_set = set(map(str, whitelist))
-    elif use_internal_whitelist and paths.internal_whitelist.exists():
-        wl_set = set(
-            pd.read_csv(
-                paths.internal_whitelist, sep="\t", header=None,
-                names=["barcode"], dtype=str, compression="infer",
-            )["barcode"].tolist()
-        )
-    elif use_internal_whitelist:
-        warnings.warn(
-            f"Sample {sample_id!r}: use_internal_whitelist=True but "
-            f"{paths.internal_whitelist} not found; proceeding without whitelist.",
-            stacklevel=3,
-        )
-
+    # Barcode whitelist via the shared resolver (raw 16-mers, before suffixing).
+    resolved: ResolvedWhitelist = resolve_whitelist(
+        sample_id=sample_id,
+        barcode_whitelist=barcode_whitelist,
+        tissue_positions=tissue_positions,
+        use_internal_whitelist=use_internal_whitelist,
+        internal_whitelist_path=paths.internal_whitelist,
+        spatial_library_id=spatial_library_id,
+    )
+    wl_set = resolved.barcodes
     if wl_set is not None:
         keep_cells = np.array([bc in wl_set for bc in barcodes], dtype=bool)
         if not keep_cells.any():
@@ -207,8 +209,21 @@ def _read_one_sample(
         mtx = mtx[:, keep_cells]
         barcodes = barcodes[keep_cells]
 
-    return _SampleArtifacts(features=features, barcodes=barcodes,
-                            mtx=mtx.tocsc())
+    spatial_aligned = None
+    if resolved.spatial is not None:
+        spatial_aligned = resolved.spatial.reindex(barcodes)
+        if spatial_aligned.isna().any().any():
+            n_missing = int(spatial_aligned["in_tissue"].isna().sum())
+            raise RuntimeError(
+                f"SJ sample {sample_id!r}: {n_missing} kept barcodes have no "
+                "tissue_positions row — internal whitelist filtering bug."
+            )
+
+    return _SampleArtifacts(
+        features=features, barcodes=barcodes, mtx=mtx.tocsc(),
+        spatial=spatial_aligned, library_id=resolved.library_id,
+        whitelist_source=resolved.source,
+    )
 
 
 def _global_junction_table(
@@ -233,8 +248,13 @@ def _global_junction_table(
 def _concat_samples(
     artifacts: list[_SampleArtifacts],
     sample_ids: Sequence[str],
-) -> tuple[sp.csc_matrix, pd.DataFrame, pd.DataFrame]:
-    """Union junctions across samples (zero-pad) and stack cell axes."""
+) -> tuple[sp.csc_matrix, pd.DataFrame, pd.DataFrame, dict | None, np.ndarray | None]:
+    """Union junctions across samples (zero-pad) and stack cell axes.
+
+    Returns ``(mtx_concat, var_pre, obs, spatial_uns, spatial_arr)`` where
+    the last two are only non-None when at least one sample had a
+    ``tissue_positions`` whitelist applied.
+    """
     var_pre = _global_junction_table(artifacts)
 
     # (chr, start, end, strand) → global row index.
@@ -246,6 +266,8 @@ def _concat_samples(
 
     remapped_mtxs: list[sp.csc_matrix] = []
     obs_rows: list[pd.DataFrame] = []
+    spatial_obs_rows: list[pd.DataFrame] = []
+    spatial_uns: dict[str, dict] = {}
     for art, sid in zip(artifacts, sample_ids, strict=True):
         n_cells = art.mtx.shape[1]
         if len(art.features) == 0 or art.mtx.nnz == 0:
@@ -268,6 +290,16 @@ def _concat_samples(
             "barcode": art.barcodes,
             "sample_id": np.full(n_cells, sid, dtype=object),
         }))
+        if art.spatial is not None:
+            sp_df = art.spatial.reset_index(drop=False).copy()
+            if "barcode" not in sp_df.columns and "index" in sp_df.columns:
+                sp_df = sp_df.rename(columns={"index": "barcode"})
+            sp_df["sample_id"] = sid
+            spatial_obs_rows.append(sp_df)
+            if art.library_id is not None:
+                spatial_uns[art.library_id] = {
+                    "metadata": {"source": "starsolo+tissue_positions"},
+                }
 
     mtx_concat = sp.hstack(remapped_mtxs, format="csc").astype(np.float64)
     obs = pd.concat(obs_rows, axis=0, ignore_index=True)
@@ -275,7 +307,28 @@ def _concat_samples(
     obs.index = pd.Index(
         [f"{bc}-{sid}" for bc, sid in zip(obs["barcode"], obs["sample_id"], strict=True)]
     )
-    return mtx_concat, var_pre, obs
+
+    spatial_arr: np.ndarray | None = None
+    if spatial_obs_rows:
+        sp_concat = pd.concat(spatial_obs_rows, axis=0, ignore_index=True)
+        sp_concat["barcode"] = sp_concat["barcode"].astype(str)
+        sp_concat["sample_id"] = sp_concat["sample_id"].astype(str)
+        obs_key = pd.DataFrame({
+            "barcode": obs["barcode"].astype(str).to_numpy(),
+            "sample_id": obs["sample_id"].astype(str).to_numpy(),
+        })
+        merged = obs_key.merge(sp_concat, on=["barcode", "sample_id"], how="left")
+        obs["in_tissue"] = merged["in_tissue"].fillna(-1).astype(np.int8).to_numpy()
+        obs["array_row"] = merged["array_row"].fillna(-1).astype(np.int32).to_numpy()
+        obs["array_col"] = merged["array_col"].fillna(-1).astype(np.int32).to_numpy()
+        spatial_arr = np.stack(
+            [merged["pxl_row_in_fullres"].to_numpy(dtype=np.float64),
+             merged["pxl_col_in_fullres"].to_numpy(dtype=np.float64)],
+            axis=1,
+        )
+        spatial_arr = np.where(np.isnan(spatial_arr), -1.0, spatial_arr)
+
+    return mtx_concat, var_pre, obs, (spatial_uns if spatial_uns else None), spatial_arr
 
 
 def _apply_ljv_grouping(
@@ -430,6 +483,8 @@ def read_starsolo(
     keep_multi_mapped: bool = False,
     min_counts: int = 1,
     ljv_kind: Literal["start_end", "start", "end"] = "start_end",
+    tissue_positions: Sequence[str | Path | None] | None = None,
+    spatial_library_ids: Sequence[str | None] | None = None,
     verbose: bool = False,
 ) -> ad.AnnData:
     """Read STARsolo splice-junction output and assemble a splicing AnnData.
@@ -466,8 +521,33 @@ def read_starsolo(
         matches R splikit), ``"start"`` (only ``_S``), or ``"end"`` (only
         ``_E``). The single-half modes are advanced overrides for users who
         only care about alternative 5' or 3' splice sites.
+    tissue_positions
+        Per-sample optional path to a Space Ranger
+        ``tissue_positions[_list].csv``. When provided for a sample, the
+        file's barcodes act as the whitelist (raw/ source) and populate
+        ``obs["in_tissue"]`` / ``obs["array_row"]`` / ``obs["array_col"]``,
+        ``obsm["spatial"]``, and ``uns["spatial"][library_id]`` per the
+        squidpy contract. Header (Space Ranger 2.x) and headerless
+        ``tissue_positions_list.csv`` (v1) are auto-detected.
+    spatial_library_ids
+        Per-sample squidpy library_id key for ``uns["spatial"]``. Defaults
+        to ``sample_ids[i]`` when not given.
     verbose
         Print per-sample progress to stdout.
+
+    Notes
+    -----
+    Whitelist precedence per sample:
+
+    1. ``tissue_positions[i]`` (when given)
+    2. ``barcode_whitelists[i]`` (when given)
+    3. ``use_internal_whitelist=True`` and ``Gene/filtered/barcodes.tsv`` exists
+    4. otherwise no whitelist (use all raw barcodes)
+
+    The SJ feature has only ``raw/`` available (no per-feature filtered
+    dir), so the "read raw and intersect" step is the only mode regardless
+    of which precedence rule fires; the rule still affects WHICH barcodes
+    are kept.
 
     Returns
     -------
@@ -498,40 +578,30 @@ def read_starsolo(
             f"ljv_kind must be 'start_end', 'start', or 'end'; got {ljv_kind!r}"
         )
 
-    if barcode_whitelists is None:
-        whitelists_per_sample: list[Sequence[str] | None] = [None] * len(sj_dirs)
-    else:
-        if len(barcode_whitelists) != len(sj_dirs):
-            raise ValueError(
-                f"len(barcode_whitelists)={len(barcode_whitelists)} must equal "
-                f"len(sj_dirs)={len(sj_dirs)}"
-            )
-        whitelists_per_sample = []
-        for wl in barcode_whitelists:
-            if wl is None:
-                whitelists_per_sample.append(None)
-            elif isinstance(wl, (str, Path)):
-                wl_arr = pd.read_csv(
-                    wl, sep="\t", header=None, names=["barcode"],
-                    dtype=str, compression="infer",
-                )["barcode"].tolist()
-                whitelists_per_sample.append(wl_arr)
-            else:
-                whitelists_per_sample.append(list(map(str, wl)))
+    n = len(sj_dirs)
+    bcw = normalize_per_sample_arg(barcode_whitelists, n, name="barcode_whitelists")
+    tp = normalize_per_sample_arg(tissue_positions, n, name="tissue_positions")
+    libs = normalize_per_sample_arg(spatial_library_ids, n, name="spatial_library_ids")
 
     artifacts: list[_SampleArtifacts] = []
-    for sj_dir, sid, wl in zip(sj_dirs, sample_ids, whitelists_per_sample, strict=True):
+    for sj_dir, sid, bw, tps, lib in zip(
+        sj_dirs, sample_ids, bcw, tp, libs, strict=True,
+    ):
         artifacts.append(
             _read_one_sample(
                 sj_dir, sid,
                 keep_multi_mapped=keep_multi_mapped,
-                whitelist=wl,
-                use_internal_whitelist=use_internal_whitelist and wl is None,
+                barcode_whitelist=bw,
+                tissue_positions=tps,
+                use_internal_whitelist=use_internal_whitelist,
+                spatial_library_id=lib,
                 verbose=verbose,
             )
         )
 
-    mtx_concat, var_pre, obs = _concat_samples(artifacts, sample_ids)
+    mtx_concat, var_pre, obs, spatial_uns, spatial_arr = _concat_samples(
+        artifacts, sample_ids,
+    )
     mtx_grouped, var_grouped = _apply_ljv_grouping(mtx_concat, var_pre, ljv_kind)
     mtx_grouped, var_grouped = _filter_min_counts(mtx_grouped, var_grouped, min_counts)
 
@@ -555,9 +625,15 @@ def read_starsolo(
                 "min_counts": int(min_counts),
                 "ljv_kind": ljv_kind,
                 "use_internal_whitelist": bool(use_internal_whitelist),
+                "any_explicit_whitelist": any(b is not None for b in bcw),
+                "any_tissue_positions": any(t is not None for t in tp),
             }
         },
     }
+    if spatial_arr is not None:
+        adata.obsm["spatial"] = spatial_arr.astype(np.float64, copy=False)
+    if spatial_uns is not None:
+        adata.uns["spatial"] = spatial_uns
     invalidate_m2(adata)
 
     # Final sanity check: the schema validators must pass on the output.
