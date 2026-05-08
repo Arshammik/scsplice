@@ -12,6 +12,7 @@ endif()
 pybind11_add_module(_splikit_cpp
     bindings.cpp
     make_m2.cpp
+    deviance.cpp
 )
 
 target_link_libraries(_splikit_cpp PRIVATE Eigen3::Eigen)
