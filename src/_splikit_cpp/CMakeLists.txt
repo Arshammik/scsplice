@@ -1,12 +1,21 @@
-# Match R's CRAN baseline so floating-point reduction order is deterministic
-# across our build vs the R reference. Override per-platform if needed.
+# Compiler flags. On x86_64 we match R's CRAN baseline (-march=nocona
+# -mtune=haswell -ftree-vectorize) so floating-point reduction order is
+# deterministic across our build vs the R reference. On other ISAs (notably
+# macOS-arm64, since GitHub's macos-latest is Apple Silicon since late 2024)
+# clang rejects the x86-only flags; let the compiler pick its own defaults
+# there. Vectorisation is enabled by default at -O2/-O3 on every supported
+# compiler regardless of these flags.
 set(SPLIKIT_CXX_OPTS "")
 if(NOT MSVC)
-    list(APPEND SPLIKIT_CXX_OPTS
-        -march=nocona
-        -mtune=haswell
-        -ftree-vectorize
-    )
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|i[3-6]86)")
+        list(APPEND SPLIKIT_CXX_OPTS
+            -march=nocona
+            -mtune=haswell
+            -ftree-vectorize
+        )
+    endif()
+    # On non-x86 (notably macOS-arm64) we leave -march unset; -O3 already
+    # enables auto-vectorisation on every supported compiler.
 endif()
 
 pybind11_add_module(_splikit_cpp
