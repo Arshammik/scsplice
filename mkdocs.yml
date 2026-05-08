@@ -121,6 +121,7 @@ nav:
     - Preprocessing: reference/pp.md
   - Explanation:
     - Data model: explanation/data-model.md
+    - I/O readers and AnnData layouts: explanation/io-readers-and-data-layouts.md
   - Release notes: release-notes.md
   - Contributing: contributing.md
 
