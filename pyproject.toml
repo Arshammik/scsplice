@@ -1,0 +1,100 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "pybind11>=2.11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "splikit-py"
+version = "0.1.0.dev0"
+description = "Single-cell alternative-splicing analysis on AnnData (Python port of R splikit)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Arsham Mikaeili Namini", email = "arsham.mikaeilinamini@mail.mcgill.ca" },
+]
+keywords = ["single-cell", "splicing", "scverse", "anndata", "scrna-seq"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "anndata>=0.10",
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "pandas>=2.2",
+    "h5py>=3.10",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-cov",
+    "pytest-xdist",
+]
+r-equivalence = [
+    "rpy2>=3.5",
+]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-book-theme",
+    "myst-nb",
+    "sphinx-autodoc-typehints",
+]
+dev = [
+    "splikit-py[test,docs]",
+    "ruff",
+    "pre-commit",
+]
+
+[project.urls]
+Homepage = "https://github.com/Arshammik/splikitpy"
+Issues = "https://github.com/Arshammik/splikitpy/issues"
+Source = "https://github.com/Arshammik/splikitpy"
+
+[tool.scikit-build]
+wheel.packages = ["src/splikit"]
+cmake.build-type = "Release"
+cmake.verbose = true
+minimum-version = "0.5"
+build-dir = "build/{wheel_tag}"
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-*"
+skip = "*-musllinux_*"
+build-frontend = "build"
+test-command = "python -c \"import splikit; print(splikit.__version__)\""
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+markers = [
+    "slow: long-running tests (>30s)",
+    "r_required: requires R + rpy2 to regenerate reference fixtures",
+    "openmp: requires OpenMP-enabled build",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "NPY", "PD", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["B011"]
+"docs/conf.py" = ["E402"]
