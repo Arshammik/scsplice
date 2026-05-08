@@ -88,6 +88,34 @@ Contract checks (all pass):
 * M1 / M2 must be shape-aligned (gedi2py asserts this); the `m2_valid`
   invariant on splikit-py's side guarantees it.
 
+### Important finding: gedi2py M_paired binding is incomplete
+
+When `test_gedi2py_runs_on_splikit_output` actually invokes
+`gd.tl.gedi(layer="M1", layer2="M2", ...)` on the splikit-py AnnData, it
+fails at `_model.py:315`:
+
+    AttributeError: 'gedi2py._gedi2py_cpp.GEDI' object has no attribute
+    'set_M1i_M2i'
+
+gedi2py's **Python** wrapper claims M_paired support and calls
+`self._cpp_model.set_M1i_M2i(M1i_list, M2i_list)`, but its **C++** binding
+(`src/_gedi2py_cpp/bindings.cpp`) does not actually expose `set_M1i_M2i`.
+For comparison, `multigedipy_pkg/src/_multigedipy_cpp/bindings.cpp` line 171
+DOES expose it.
+
+This is a **gedi2py-side incompleteness**, not a splikit-py output issue:
+
+* `test_input_layout_matches_gedi2py_contract` passes — splikit-py's adata
+  layout matches every requirement gedi2py's Python side asserts.
+* `test_multigedipy_runs_on_splikit_output` passes (see below) — running
+  the same call against multigedipy_pkg, which has the binding properly
+  wired, produces a valid embedding.
+
+`test_gedi2py_runs_on_splikit_output` is marked `@pytest.mark.xfail(strict=True)`
+so it stays in the test report as a visible bug-tracker entry. When gedi2py
+gets the binding wired, the test will start passing and the strict-xfail
+will fail to remind the maintainer to flip it back to a normal test.
+
 ### HVE pre-filter sizing
 
 gedi2py densifies M1 and M2 per-sample. For two samples with 5,604 + 8,966
