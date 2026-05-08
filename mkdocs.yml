@@ -1,0 +1,129 @@
+site_name: splikit-py
+site_description: Single-cell alternative-splicing analysis for the scverse ecosystem
+site_author: Arsham Mikaeili Namini
+site_url: https://arshammik.github.io/splikitpy/
+repo_url: https://github.com/Arshammik/splikitpy
+repo_name: Arshammik/splikitpy
+copyright: Copyright &copy; 2024 Arsham Mikaeili Namini
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/dna
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: black
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: white
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.path
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_signature_annotations: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            members_order: source
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_source: true
+            show_bases: true
+            inherited_members: false
+            filters:
+              - "!^_"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+  - pymdownx.tilde
+  - pymdownx.caret
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Tutorials:
+    - tutorials/index.md
+  - How-to guides:
+    - Recompute M2 after subsetting: how-to/recompute-m2-after-subsetting.md
+    - Multi-sample ingestion: how-to/multi-sample-ingestion.md
+  - Reference:
+    - reference/index.md
+    - Input / output: reference/io.md
+    - Tools: reference/tl.md
+    - Preprocessing: reference/pp.md
+  - Explanation:
+    - Data model: explanation/data-model.md
+    - Numerical equivalence: explanation/numerical-equivalence.md
+  - Release notes: release-notes.md
+  - Contributing: contributing.md
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Arshammik/splikitpy

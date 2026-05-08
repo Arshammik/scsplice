@@ -1,0 +1,68 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history required by mike
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Eigen3
+        run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+
+      - name: Install package and docs dependencies
+        run: pip install -e ".[docs]"
+
+      - name: Build docs (strict)
+        run: mkdocs build --strict
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Eigen3
+        run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+
+      - name: Install package and docs dependencies
+        run: pip install -e ".[docs]"
+
+      - name: Configure git identity for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy docs
+        run: mkdocs gh-deploy --force

@@ -49,6 +49,7 @@ coverage.xml
 Thumbs.db
 
 # Docs
+site/
 docs/_build/
 docs/api/
 
