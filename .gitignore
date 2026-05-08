@@ -52,6 +52,7 @@ Thumbs.db
 site/
 docs/_build/
 docs/api/
+.cache/
 
 # R reference fixtures: regenerate locally / on c170 via tests/r_export/*.R.
 # Not committed (toy is ~28 MB, MERFISH is ~75 MB). CI skips r_required tests.
