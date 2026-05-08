@@ -112,11 +112,26 @@ def test_make_m2_validates_inputs(synthetic_splicing_adata):
         splikit.tl.make_m2(a)
 
 
-def test_make_m2_rejects_sparse_group_ids(synthetic_splicing_adata):
+def test_make_m2_auto_remaps_sparse_group_ids(synthetic_splicing_adata):
+    """Sparse var['group_id'] (e.g., 0,0,2,2,2,2 — group 1 missing) is
+    auto-remapped to dense 0..G-1 before crossing the C++ boundary, matching
+    R splikit's wrapper behaviour. var['group_id'] itself is left untouched."""
     import splikit  # noqa: PLC0415
 
     a = synthetic_splicing_adata(n_events=6, n_cells=10, n_groups=2)
-    # Skip group 1: 0..2 with 1 missing.
-    a.var["group_id"] = np.array([0, 0, 2, 2, 2, 2], dtype=np.int32)
-    with pytest.raises(ValueError, match="dense"):
+    sparse_ids = np.array([0, 0, 2, 2, 2, 2], dtype=np.int32)
+    a.var["group_id"] = sparse_ids
+    splikit.tl.make_m2(a)
+    assert "M2" in a.layers
+    assert a.uns["splikit"]["m2_valid"] is True
+    # var schema preserved verbatim — no auto-rewrite.
+    np.testing.assert_array_equal(a.var["group_id"].to_numpy(), sparse_ids)
+
+
+def test_make_m2_rejects_negative_group_ids(synthetic_splicing_adata):
+    import splikit  # noqa: PLC0415
+
+    a = synthetic_splicing_adata(n_events=6, n_cells=10, n_groups=2)
+    a.var["group_id"] = np.array([0, -1, 2, 2, 2, 2], dtype=np.int32)
+    with pytest.raises(ValueError, match="non-negative"):
         splikit.tl.make_m2(a)

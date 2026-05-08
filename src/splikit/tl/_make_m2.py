@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 
 from splikit._core._validators import (
@@ -34,22 +35,29 @@ def _import_extension():
     return _splikit_cpp
 
 
-def _validate_dense_zero_indexed(group_ids: np.ndarray) -> None:
-    """Assert ``group_ids`` is dense 0..G-1 contiguous (the C++ kernel precondition)."""
+def _validate_and_densify_group_ids(group_ids: np.ndarray) -> np.ndarray:
+    """Validate that ``group_ids`` are non-negative integers, returning a
+    dense ``0..G-1`` int32 vector that the C++ kernel can consume directly.
+
+    The wrapper accepts any non-negative integer labelling (sparse or dense)
+    and re-factorizes to dense codes before crossing the FFI boundary. This
+    matches R splikit's ``make_m2`` wrapper, which always remaps
+    ``eventdata$group_id`` via ``setNames(seq_along(unique(.))-1L, .)``
+    before calling the C++ kernel — see
+    ``splikit/R/star_solo_processing.R:655-657``.
+
+    Idempotent: if input is already dense ``0..G-1``, the output is identical.
+    """
     if group_ids.size == 0:
-        return
+        return group_ids.astype(np.int32, copy=False)
     g_min = int(group_ids.min())
-    g_max = int(group_ids.max())
     if g_min < 0:
         raise ValueError(f"var['group_id'] must be non-negative, got min={g_min}")
-    expected = set(range(g_max + 1))
-    actual = set(group_ids.tolist())
-    if actual != expected:
-        missing = sorted(expected - actual)
-        raise ValueError(
-            f"var['group_id'] must be a dense 0..{g_max} mapping, missing: "
-            f"{missing[:10]}{'...' if len(missing) > 10 else ''}"
-        )
+    # `pd.factorize` over the integer vector preserves first-appearance
+    # ordering and yields codes 0..G-1 with no gaps, regardless of the input
+    # being already dense or sparse.
+    codes, _ = pd.factorize(group_ids, use_na_sentinel=False)
+    return codes.astype(np.int32, copy=False)
 
 
 def make_m2(
@@ -111,14 +119,14 @@ def make_m2(
     # AnnData is cells × events; the kernel works in events × cells.
     M1_T = M1.T.tocsc()
 
-    group_ids = np.asarray(adata.var["group_id"], dtype=np.int32)
+    group_ids = np.asarray(adata.var["group_id"])
     if group_ids.shape != (adata.n_vars,):
         raise ValueError(
             f"var['group_id'] shape {group_ids.shape} != (n_vars={adata.n_vars},)"
         )
-    _validate_dense_zero_indexed(group_ids)
+    group_ids_dense = _validate_and_densify_group_ids(group_ids)
 
-    M2_T = cpp.make_m2(M1_T, group_ids, int(n_threads))
+    M2_T = cpp.make_m2(M1_T, group_ids_dense, int(n_threads))
 
     M2 = sp.csc_matrix(M2_T).T.tocsc()
     if M2.dtype != np.float64:
