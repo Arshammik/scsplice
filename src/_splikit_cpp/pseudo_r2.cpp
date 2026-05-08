@@ -1,6 +1,5 @@
 #include "pseudo_r2.hpp"
 
-#include <Eigen/QR>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -30,12 +29,14 @@ inline double clamp_p(double p) {
     return p;
 }
 
-inline double sigmoid_naive(double e) {
-    // Match R kernel verbatim (line ~55 in cpp_pseudoR2.cpp). Overflow at
-    // |e| >> 0 produces NaN which is then clamped to EPS / (1-EPS) by clamp_p,
-    // matching the R behaviour where the clamp also runs after the sigmoid.
-    const double ee = std::exp(e);
-    return ee / (1.0 + ee);
+inline double sigmoid_stable(double e) {
+    // Numerically stable form: 1/(1+exp(-e)) is bounded in [0,1] for all
+    // finite e (no inf/inf overflow). Matches R splikit's behaviour: R uses
+    // the same stable form via base R's plogis(); the IRLS clamp then
+    // pulls borderline values to EPS / (1-EPS). Naive exp(e)/(1+exp(e))
+    // overflows past |e| ~= 710 and silently NaN-propagates, NaN-ing 16
+    // separating-hyperplane events that R fits cleanly.
+    return 1.0 / (1.0 + std::exp(-e));
 }
 
 double per_event(const Eigen::Ref<const Eigen::MatrixXd>& Z,
@@ -82,7 +83,7 @@ double per_event(const Eigen::Ref<const Eigen::MatrixXd>& Z,
         Eigen::VectorXd w(n_valid);
         Eigen::VectorXd z_work(n_valid);
         for (int j = 0; j < n_valid; ++j) {
-            const double p_j = clamp_p(sigmoid_naive(eta[j]));
+            const double p_j = clamp_p(sigmoid_stable(eta[j]));
             p[j] = p_j;
             const double mu_j = n_trials[j] * p_j;
             w[j] = n_trials[j] * p_j * (1.0 - p_j);
@@ -103,9 +104,20 @@ double per_event(const Eigen::Ref<const Eigen::MatrixXd>& Z,
             XtWz[1] += w_j * x1 * z_work[j];
         }
 
-        Eigen::ColPivHouseholderQR<Eigen::Matrix2d> qr(XtWX);
-        if (qr.rank() < 2) return NaN;
-        beta_new = qr.solve(XtWz);
+        // Closed-form 2x2 inverse via Cramer's rule. Bit-equivalent to LAPACK
+        // dgesv on a 2x2 system (which Armadillo's solve(no_approx) calls).
+        // Eigen's ColPivHouseholderQR rejects near-singular matrices via a
+        // relative rank threshold; that threshold differs from dgesv's
+        // exactly-zero-pivot test and produced 16 spurious NaN events vs R.
+        const double a11 = XtWX(0, 0);
+        const double a12 = XtWX(0, 1);
+        const double a21 = XtWX(1, 0);
+        const double a22 = XtWX(1, 1);
+        const double det = a11 * a22 - a12 * a21;
+        if (!std::isfinite(det) || det == 0.0) return NaN;
+        const double inv_det = 1.0 / det;
+        beta_new[0] = inv_det * (a22 * XtWz[0] - a12 * XtWz[1]);
+        beta_new[1] = inv_det * (a11 * XtWz[1] - a21 * XtWz[0]);
         if ((beta_new - beta).cwiseAbs().maxCoeff() < TOL) {
             beta = beta_new;
             break;
@@ -117,8 +129,7 @@ double per_event(const Eigen::Ref<const Eigen::MatrixXd>& Z,
     Eigen::VectorXd eta_final = X * beta;
     double D_full = 0.0;
     for (int j = 0; j < n_valid; ++j) {
-        const double p_j = clamp_p(sigmoid_naive(eta_final[j]));
-        if (std::isnan(p_j)) return NaN;
+        const double p_j = clamp_p(sigmoid_stable(eta_final[j]));
         const double mu_j = n_trials[j] * p_j;
         const double m1_j = y[j];
         const double m2_j = n_trials[j] - m1_j;
