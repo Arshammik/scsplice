@@ -97,15 +97,20 @@ def main() -> int:
     py_adata = ad.read_h5ad(PY_PATH)
     print(f"[compare]   py adata: {py_adata.n_obs} x {py_adata.n_vars}", flush=True)
 
-    # Align var on row_names_mtx + group_kind so both _S and _E rows of the
-    # same junction are matched correctly.
-    py_keys = np.array(
-        [f"{rn}|{kk}" for rn, kk in zip(
-            np.asarray(py_adata.var["row_names_mtx"]),
-            np.asarray(py_adata.var["group_kind"]).astype(str),
-        )]
-    )
-    r_keys = np.array([f"{rn}|{kk}" for rn, kk in zip(r_event_id, r_group_kind)])
+    # Align var on (row_names_mtx_unsuffixed, group_kind). Schema note: R splikit
+    # stores row_names_mtx WITH the _S/_E suffix (legacy from R make_m1 ~line 378
+    # which appends "_S"/"_E" to the un-suffixed junction id). splikit-py stores
+    # the un-suffixed form per the documented schema. Strip the suffix on the R
+    # side for the comparison key; same junction, same coordinates.
+    def _strip_suffix(name: str) -> str:
+        return name[:-2] if name.endswith(("_S", "_E")) else name
+
+    py_bare = np.asarray(py_adata.var["row_names_mtx"]).astype(str)
+    py_kind = np.asarray(py_adata.var["group_kind"]).astype(str)
+    r_bare = np.array([_strip_suffix(n) for n in r_event_id])
+    r_kind = np.asarray(r_group_kind).astype(str)
+    py_keys = np.array([f"{rn}|{kk}" for rn, kk in zip(py_bare, py_kind)])
+    r_keys = np.array([f"{rn}|{kk}" for rn, kk in zip(r_bare, r_kind)])
 
     py_idx = pd.Index(py_keys)
     if not py_idx.is_unique:
@@ -198,7 +203,7 @@ def main() -> int:
 
     # Eventdata equality.
     py_var_aligned = py_adata.var.iloc[py_to_common]
-    r_event_aligned = r_event_id[r_to_common]
+    r_event_aligned = r_bare[r_to_common]  # un-suffixed; matches schema
     r_kind_aligned = r_group_kind[r_to_common]
     r_count_aligned = r_group_count[r_to_common]
     r_gid_aligned = r_group_id[r_to_common]
