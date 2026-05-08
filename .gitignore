@@ -57,3 +57,6 @@ tests/data/*.large.h5
 
 # Notebooks
 .ipynb_checkpoints/
+
+# AI files
+CLAUDE.md
