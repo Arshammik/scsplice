@@ -394,7 +394,13 @@ def _filter_min_counts(
     var_grouped: pd.DataFrame,
     min_counts: int,
 ) -> tuple[sp.csc_matrix, pd.DataFrame]:
-    """Drop event rows whose total count across all cells is below ``min_counts``."""
+    """Drop event rows whose total count across all cells is below ``min_counts``.
+
+    Re-factorizes ``group_id`` after filtering so the dense ``0..G-1`` invariant
+    documented for ``var["group_id"]`` (and required by the C++ kernel) holds
+    on the returned AnnData. Dropping events can leave gaps in the group_id
+    range when an entire LJV group's members all fail the filter.
+    """
     if min_counts <= 0:
         return mtx_grouped, var_grouped
     row_sums = np.asarray(mtx_grouped.sum(axis=1)).ravel()
@@ -404,7 +410,15 @@ def _filter_min_counts(
             f"min_counts={min_counts} removed all {len(var_grouped)} events; "
             f"row-sum range was [{row_sums.min():.1f}, {row_sums.max():.1f}]."
         )
-    return mtx_grouped[keep, :].tocsc(), var_grouped.loc[keep].copy()
+    out_var = var_grouped.loc[keep].copy()
+    # Re-densify group_id so codes are 0..G_kept-1 with no gaps.
+    new_codes, _ = pd.factorize(out_var["group_id"].to_numpy(), use_na_sentinel=False)
+    out_var["group_id"] = new_codes.astype(np.int32)
+    # group_count is no longer accurate after dropping members; rebuild.
+    out_var["group_count"] = out_var.groupby("group_id")["group_id"].transform(
+        "size"
+    ).astype(np.int32)
+    return mtx_grouped[keep, :].tocsc(), out_var
 
 
 def read_starsolo(
