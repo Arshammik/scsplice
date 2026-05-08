@@ -84,10 +84,14 @@ def _resolve_sj_paths(sj_dir: str | Path) -> _SJPaths:
     matrix = raw / "matrix.mtx" if (raw / "matrix.mtx").exists() else raw / "matrix.mtx.gz"
     barcodes = raw / "barcodes.tsv" if (raw / "barcodes.tsv").exists() else raw / "barcodes.tsv.gz"
 
-    # SJ.out.tab lives two levels up from raw/ (Solo.out/SJ/raw/ → Solo.out/)
+    # SJ.out.tab is written by STAR alongside Solo.out, NOT inside it. So
+    # for raw = <sample_root>/Solo.out/SJ/raw/, the file lives THREE levels up.
+    # Some users may also drop it inside Solo.out (e.g., synthetic fixtures or
+    # post-hoc reorganisations); accept those two locations as fallbacks.
     sj_tab_candidates = [
-        raw.parent.parent / "SJ.out.tab",
-        raw.parent / "SJ.out.tab",  # fallback if user pointed directly at SJ/raw without Solo.out
+        raw.parent.parent.parent / "SJ.out.tab",  # canonical: sample root
+        raw.parent.parent / "SJ.out.tab",          # legacy: inside Solo.out
+        raw.parent / "SJ.out.tab",                 # user pointed at Solo.out/SJ
     ]
     sj_tab = next((p for p in sj_tab_candidates if p.exists()), sj_tab_candidates[0])
     if not sj_tab.exists():
@@ -96,6 +100,8 @@ def _resolve_sj_paths(sj_dir: str | Path) -> _SJPaths:
             f"{', '.join(str(p) for p in sj_tab_candidates)}."
         )
 
+    # Internal whitelist (Gene/filtered/barcodes.tsv) lives inside Solo.out,
+    # which is two levels up from raw/.
     internal_wl = raw.parent.parent / "Gene" / "filtered" / "barcodes.tsv"
     return _SJPaths(matrix=matrix, barcodes=barcodes, sj_tab=sj_tab,
                     internal_whitelist=internal_wl)

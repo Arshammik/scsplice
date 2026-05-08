@@ -40,8 +40,10 @@ def _make_starsolo_dir(
     assert len(junctions) == n_jx
     assert len(barcodes) == n_cells
 
-    # SJ.out.tab lives at Solo.out/SJ.out.tab (the resolver also tries Solo.out/SJ/SJ.out.tab).
-    sj_tab = solo / "SJ.out.tab"
+    # SJ.out.tab lives at the sample root (alongside Solo.out), matching
+    # STAR's actual output convention. The resolver also accepts legacy
+    # locations inside Solo.out / Solo.out/SJ as fallbacks.
+    sj_tab = base / "SJ.out.tab"
     with sj_tab.open("w") as f:
         for jx in junctions:
             f.write("\t".join(str(x) for x in jx) + "\n")
