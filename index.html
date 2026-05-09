@@ -22,7 +22,7 @@
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="assets/favicon-96x96.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
@@ -102,8 +102,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="." title="splikit-py" class="md-header__button md-logo" aria-label="splikit-py" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2h2v2c0 1.44.68 2.61 1.88 3.78.86.83 2.01 1.63 3.21 2.42l-1.83 1.19C8.27 10.72 7.31 10 6.5 9.21 5.07 7.82 4 6.1 4 4zm14 0h2v2c0 2.1-1.07 3.82-2.5 5.21-1.41 1.38-3.21 2.52-4.96 3.63-1.75 1.12-3.45 2.21-4.66 3.38C6.68 17.39 6 18.56 6 20v2H4v-2c0-2.1 1.07-3.82 2.5-5.21 1.41-1.38 3.21-2.52 4.96-3.63 1.75-1.12 3.45-2.21 4.66-3.38C17.32 6.61 18 5.44 18 4zm-3.26 10.61c.99.67 1.95 1.39 2.76 2.18C18.93 16.18 20 17.9 20 20v2h-2v-2c0-1.44-.68-2.61-1.88-3.78-.86-.83-2.01-1.63-3.21-2.42zM7 3h10v1l-.06.5H7.06L7 4zm.68 3h8.64c-.24.34-.52.69-.9 1.06l-.51.44H9.07l-.49-.44c-.38-.37-.66-.72-.9-1.06m1.41 10.5h5.84l.49.44c.38.37.66.72.9 1.06H7.68c.24-.34.52-.69.9-1.06zm-2.03 3h9.88l.06.5v1H7v-1z"/></svg>
+  <img src="assets/logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -424,8 +423,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="." title="splikit-py" class="md-nav__button md-logo" aria-label="splikit-py" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2h2v2c0 1.44.68 2.61 1.88 3.78.86.83 2.01 1.63 3.21 2.42l-1.83 1.19C8.27 10.72 7.31 10 6.5 9.21 5.07 7.82 4 6.1 4 4zm14 0h2v2c0 2.1-1.07 3.82-2.5 5.21-1.41 1.38-3.21 2.52-4.96 3.63-1.75 1.12-3.45 2.21-4.66 3.38C6.68 17.39 6 18.56 6 20v2H4v-2c0-2.1 1.07-3.82 2.5-5.21 1.41-1.38 3.21-2.52 4.96-3.63 1.75-1.12 3.45-2.21 4.66-3.38C17.32 6.61 18 5.44 18 4zm-3.26 10.61c.99.67 1.95 1.39 2.76 2.18C18.93 16.18 20 17.9 20 20v2h-2v-2c0-1.44-.68-2.61-1.88-3.78-.86-.83-2.01-1.63-3.21-2.42zM7 3h10v1l-.06.5H7.06L7 4zm.68 3h8.64c-.24.34-.52.69-.9 1.06l-.51.44H9.07l-.49-.44c-.38-.37-.66-.72-.9-1.06m1.41 10.5h5.84l.49.44c.38.37.66.72.9 1.06H7.68c.24-.34.52-.69.9-1.06zm-2.03 3h9.88l.06.5v1H7v-1z"/></svg>
+  <img src="assets/logo.png" alt="logo">
 
     </a>
     splikit-py
@@ -707,6 +705,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -795,6 +797,62 @@
     
   
     Multi-sample ingestion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to/read-spatial-data-with-tissue-positions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read spatial data with tissue_positions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="how-to/multi-modal-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-modal pipeline
   
 
     
@@ -1275,7 +1333,17 @@
 <tr>
 <td><code>read_starsolo</code></td>
 <td><code>splikit.io</code></td>
-<td>Ingest STARsolo <code>Solo.out/SJ/</code> for one or more samples into a splicing AnnData</td>
+<td>Ingest STARsolo <code>Solo.out/SJ/</code> for one or more samples into a splicing AnnData. Supports <code>tissue_positions=</code> for Visium / spatial samples.</td>
+</tr>
+<tr>
+<td><code>read_starsolo_gene</code></td>
+<td><code>splikit.io</code></td>
+<td>Ingest <code>Solo.out/Gene/</code> into a cell × gene AnnData with raw counts in <code>X</code>. Drop-in for <code>scanpy.pp.normalize_total</code> and <code>scvi-tools</code>. Supports <code>tissue_positions=</code> and squidpy <code>obsm["spatial"]</code>.</td>
+</tr>
+<tr>
+<td><code>read_starsolo_velocyto</code></td>
+<td><code>splikit.io</code></td>
+<td>Ingest <code>Solo.out/Velocyto/</code> into an AnnData with <code>layers["spliced"]</code>, <code>layers["unspliced"]</code>, <code>layers["ambiguous"]</code>. Handles both modern (split-file) and legacy (stacked <code>matrix.mtx</code>) STARsolo wire formats. Drop-in for <code>scvelo</code>.</td>
 </tr>
 <tr>
 <td><code>make_m2</code></td>
@@ -1294,6 +1362,7 @@
 </tr>
 </tbody>
 </table>
+<p>All three readers share the same <code>(sample_dirs, sample_ids)</code> call shape and produce AnnDatas with identical <code>obs_names</code>, making multi-modal pipelines a clean set-intersection.</p>
 <hr />
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">splikit</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">splk</span>
@@ -1316,8 +1385,10 @@
 </ul>
 <hr />
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Pre-alpha (v0.1.0.dev0). v1.0 scope is the four functions in the table above. API may change before 1.0.</p>
+<p>Pre-alpha (v0.1.0.dev0). v1.0 scope is the six functions in the table above. API may change before 1.0.</p>
 <p><strong>R package:</strong> <a href="https://github.com/csglab/splikit">splikit (CRAN)</a> — same algorithm, R / AnnData-agnostic design.</p>
+<hr />
+<p><em>Brand note: the hexagonal seagull logo is the original R splikit artwork, shared between both packages to signal that the Python and R implementations are the same algorithm with a unified brand. In dark mode the logo is rendered on a white pill background so the black-on-white illustration remains legible against the dark site background.</em></p>
 
 
 

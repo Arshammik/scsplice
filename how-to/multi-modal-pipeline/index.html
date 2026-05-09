@@ -12,13 +12,13 @@
         <meta name="author" content="Arsham Mikaeili Namini">
       
       
-        <link rel="canonical" href="https://arshammik.github.io/splikitpy/how-to/multi-sample-ingestion/">
+        <link rel="canonical" href="https://arshammik.github.io/splikitpy/how-to/multi-modal-pipeline/">
       
       
-        <link rel="prev" href="../recompute-m2-after-subsetting/">
+        <link rel="prev" href="../read-spatial-data-with-tissue-positions/">
       
       
-        <link rel="next" href="../read-spatial-data-with-tissue-positions/">
+        <link rel="next" href="../../reference/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Multi-sample ingestion - splikit-py</title>
+        <title>Multi-modal pipeline - splikit-py</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#multi-sample-ingestion" class="md-skip">
+        <a href="#multi-modal-pipeline" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Multi-sample ingestion
+              Multi-modal pipeline
             
           </span>
         </div>
@@ -700,37 +700,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-sample ingestion
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../multi-sample-ingestion/" class="md-nav__link">
         
   
   
@@ -746,81 +719,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directory-layout-accepted" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Directory layout accepted
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#per-sample-barcode-whitelists" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-sample barcode whitelists
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#handling-samples-with-no-overlapping-junctions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Handling samples with no overlapping junctions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#large-cohorts-memory-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Large cohorts: memory considerations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -858,10 +756,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../multi-modal-pipeline/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-modal pipeline
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -877,6 +802,120 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-read-all-three-modalities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Read all three modalities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-prepare-the-splicing-modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Prepare the splicing modality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-prepare-the-gene-expression-modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Prepare the gene-expression modality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-align-cells-across-modalities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Align cells across modalities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-pass-to-a-joint-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Pass to a joint model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Pass to a joint model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-multigedipymultigedimodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — multigedipy.MultiGEDIModel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-scvelo-velocity-on-aligned-cells" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — scvelo velocity on aligned cells
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-on-modality-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes on modality alignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1255,10 +1294,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
+  <a href="#1-read-all-three-modalities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic usage
+        1. Read all three modalities
       
     </span>
   </a>
@@ -1266,10 +1305,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#directory-layout-accepted" class="md-nav__link">
+  <a href="#2-prepare-the-splicing-modality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Directory layout accepted
+        2. Prepare the splicing modality
       
     </span>
   </a>
@@ -1277,10 +1316,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#per-sample-barcode-whitelists" class="md-nav__link">
+  <a href="#3-prepare-the-gene-expression-modality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Per-sample barcode whitelists
+        3. Prepare the gene-expression modality
       
     </span>
   </a>
@@ -1288,10 +1327,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#handling-samples-with-no-overlapping-junctions" class="md-nav__link">
+  <a href="#4-align-cells-across-modalities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Handling samples with no overlapping junctions
+        4. Align cells across modalities
       
     </span>
   </a>
@@ -1299,10 +1338,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#large-cohorts-memory-considerations" class="md-nav__link">
+  <a href="#5-pass-to-a-joint-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Large cohorts: memory considerations
+        5. Pass to a joint model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Pass to a joint model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-multigedipymultigedimodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — multigedipy.MultiGEDIModel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-scvelo-velocity-on-aligned-cells" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — scvelo velocity on aligned cells
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-on-modality-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes on modality alignment
       
     </span>
   </a>
@@ -1377,98 +1455,137 @@
   
 
 
-<h1 id="multi-sample-ingestion">Multi-sample ingestion<a class="headerlink" href="#multi-sample-ingestion" title="Permanent link">&para;</a></h1>
-<p><code>read_starsolo</code> accepts one or more STARsolo SJ directories in a single call. All samples are processed together: junctions are unioned across samples (zero-padded where absent), barcodes are namespaced by <code>sample_id</code>, and LJV grouping is applied to the pooled junction table.</p>
-<h2 id="basic-usage">Basic usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
+<h1 id="multi-modal-pipeline">Multi-modal pipeline<a class="headerlink" href="#multi-modal-pipeline" title="Permanent link">&para;</a></h1>
+<p>This how-to shows how to feed the same <code>(sample_dirs, sample_ids)</code> inputs into
+all three STARsolo readers, align cells across modalities by <code>obs_names</code>, and
+pass the result to a joint model (<code>multigedipy.MultiGEDIModel</code>).</p>
+<p>For the reader design rationale and AnnData schemas see
+<a href="../../explanation/io-readers-and-data-layouts/">STARsolo readers and AnnData data layouts</a>.</p>
+<hr />
+<h2 id="1-read-all-three-modalities">1. Read all three modalities<a class="headerlink" href="#1-read-all-three-modalities" title="Permanent link">&para;</a></h2>
+<p>The three readers share an identical call shape. Running them on the same
+<code>(sample_dirs, sample_ids)</code> produces AnnDatas with a common <code>obs_names</code>
+convention (<code>&lt;barcode&gt;-&lt;sample_id&gt;</code>):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">splikit</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">splk</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">adata</span> <span class="o">=</span> <span class="n">splk</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_starsolo</span><span class="p">(</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">sj_dirs</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="s2">&quot;run1/Solo.out/SJ&quot;</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="s2">&quot;run2/Solo.out/SJ&quot;</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">&quot;run3/Solo.out/SJ&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="p">],</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">sample_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;donor_A&quot;</span><span class="p">,</span> <span class="s2">&quot;donor_B&quot;</span><span class="p">,</span> <span class="s2">&quot;donor_C&quot;</span><span class="p">],</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;sample_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">())</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># donor_A    4821</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># donor_B    5103</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1"># donor_C    3977</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">sample_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sample1&quot;</span><span class="p">,</span> <span class="s2">&quot;sample2&quot;</span><span class="p">,</span> <span class="s2">&quot;sample3&quot;</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">sample_ids</span>  <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;s1&quot;</span><span class="p">,</span>      <span class="s2">&quot;s2&quot;</span><span class="p">,</span>      <span class="s2">&quot;s3&quot;</span><span class="p">]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Splicing (M1 + M2 in layers; X = None)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">spl</span> <span class="o">=</span> <span class="n">splk</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_starsolo</span><span class="p">(</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">sj_dirs</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">/Solo.out/SJ&quot;</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">sample_dirs</span><span class="p">],</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">sample_ids</span><span class="o">=</span><span class="n">sample_ids</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Gene expression (raw counts in X)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">gex</span> <span class="o">=</span> <span class="n">splk</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_starsolo_gene</span><span class="p">(</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">sample_dirs</span><span class="o">=</span><span class="n">sample_dirs</span><span class="p">,</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">sample_ids</span><span class="o">=</span><span class="n">sample_ids</span><span class="p">,</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">var_names</span><span class="o">=</span><span class="s2">&quot;gene_ids&quot;</span><span class="p">,</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">)</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1"># RNA velocity (spliced / unspliced / ambiguous in layers; X = spliced)</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="n">vel</span> <span class="o">=</span> <span class="n">splk</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_starsolo_velocyto</span><span class="p">(</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">sample_dirs</span><span class="o">=</span><span class="n">sample_dirs</span><span class="p">,</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">sample_ids</span><span class="o">=</span><span class="n">sample_ids</span><span class="p">,</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">)</span>
 </span></code></pre></div>
-<p><code>adata.obs_names</code> are <code>f"{barcode}-{sample_id}"</code>, so barcodes that collide across samples remain distinct.</p>
-<h2 id="directory-layout-accepted">Directory layout accepted<a class="headerlink" href="#directory-layout-accepted" title="Permanent link">&para;</a></h2>
-<p><code>read_starsolo</code> accepts two path forms for each directory in <code>sj_dirs</code>:</p>
-<ul>
-<li><code>&lt;run&gt;/Solo.out/SJ/</code> — with a <code>raw/</code> subdirectory containing <code>matrix.mtx</code> and <code>barcodes.tsv</code>.</li>
-<li><code>&lt;run&gt;/Solo.out/SJ/raw/</code> — pointing directly to the <code>raw/</code> subdirectory.</li>
-</ul>
-<p>It locates <code>SJ.out.tab</code> two levels above the <code>raw/</code> directory (i.e. at <code>Solo.out/SJ.out.tab</code>).</p>
-<h2 id="per-sample-barcode-whitelists">Per-sample barcode whitelists<a class="headerlink" href="#per-sample-barcode-whitelists" title="Permanent link">&para;</a></h2>
-<p>By default (<code>use_internal_whitelist=True</code>), each sample's barcode list is filtered using STARsolo's own <code>Gene/filtered/barcodes.tsv</code>. Pass explicit per-sample whitelists to override:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">adata</span> <span class="o">=</span> <span class="n">splk</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_starsolo</span><span class="p">(</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">sj_dirs</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;run1/Solo.out/SJ&quot;</span><span class="p">,</span> <span class="s2">&quot;run2/Solo.out/SJ&quot;</span><span class="p">],</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">sample_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;s1&quot;</span><span class="p">,</span> <span class="s2">&quot;s2&quot;</span><span class="p">],</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">barcode_whitelists</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="s2">&quot;whitelists/s1_barcodes.txt&quot;</span><span class="p">,</span>  <span class="c1"># path to a one-barcode-per-line file</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="kc">None</span><span class="p">,</span>                           <span class="c1"># fall back to internal whitelist for s2</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="p">],</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
+<div class="admonition note">
+<p class="admonition-title">Whitelist alignment</p>
+<p>Each reader applies its own whitelist by default (<code>use_internal_whitelist=True</code>),
+which means the three AnnDatas may have slightly different cell sets (the SJ
+reader keeps cells with at least one junction count; the gene and velocyto
+readers use <code>Gene/filtered/barcodes.tsv</code>). The intersection step below
+handles this.</p>
+</div>
+<hr />
+<h2 id="2-prepare-the-splicing-modality">2. Prepare the splicing modality<a class="headerlink" href="#2-prepare-the-splicing-modality" title="Permanent link">&para;</a></h2>
+<p>Run the splicing pipeline before aligning cells — HVE selection may further
+reduce the cell set if you filter on <code>min_row_sum</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">splk</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">make_m2</span><span class="p">(</span><span class="n">spl</span><span class="p">,</span> <span class="n">n_threads</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">splk</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">highly_variable_events</span><span class="p">(</span><span class="n">spl</span><span class="p">,</span> <span class="n">min_row_sum</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">n_top</span><span class="o">=</span><span class="mi">10_000</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                                <span class="n">sample_key</span><span class="o">=</span><span class="s2">&quot;sample_id&quot;</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">spl_hve</span> <span class="o">=</span> <span class="n">spl</span><span class="p">[:,</span> <span class="n">spl</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;highly_variable&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># M2 is invalidated by var-axis subsetting; rebuild.</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">splk</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">make_m2</span><span class="p">(</span><span class="n">spl_hve</span><span class="p">,</span> <span class="n">n_threads</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Each entry in <code>barcode_whitelists</code> can be:</p>
-<ul>
-<li>A path (<code>str</code> or <code>pathlib.Path</code>) to a one-barcode-per-line file (optionally gzip-compressed).</li>
-<li>A <code>list[str]</code> of raw 16-mer barcodes.</li>
-<li><code>None</code> to defer to <code>use_internal_whitelist</code> for that sample.</li>
-</ul>
-<h2 id="handling-samples-with-no-overlapping-junctions">Handling samples with no overlapping junctions<a class="headerlink" href="#handling-samples-with-no-overlapping-junctions" title="Permanent link">&para;</a></h2>
-<p>Samples that share zero junctions still work correctly. Zero-padding fills in the missing rows so the global junction table is always the union. Events present in only one sample will have zero M1 counts in all other samples — they survive <code>min_counts=1</code> only if at least one cell in the contributing sample has a non-zero count.</p>
-<p>To drop events that appear in fewer than K samples, filter after ingestion:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<hr />
+<h2 id="3-prepare-the-gene-expression-modality">3. Prepare the gene-expression modality<a class="headerlink" href="#3-prepare-the-gene-expression-modality" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">scanpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sc</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Keep events present (non-zero row sum per sample) in at least 2 of 3 samples</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">sample_ids</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;sample_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">per_sample_nonzero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;sample_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">sid</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;M1&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="k">for</span> <span class="n">sid</span> <span class="ow">in</span> <span class="n">sample_ids</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">])</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">n_samples_present</span> <span class="o">=</span> <span class="n">per_sample_nonzero</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="n">n_samples_present</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">filter_cells</span><span class="p">(</span><span class="n">gex</span><span class="p">,</span> <span class="n">min_genes</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">filter_genes</span><span class="p">(</span><span class="n">gex</span><span class="p">,</span> <span class="n">min_cells</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">gex</span><span class="p">,</span> <span class="n">target_sum</span><span class="o">=</span><span class="mf">1e4</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">gex</span><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">highly_variable_genes</span><span class="p">(</span><span class="n">gex</span><span class="p">,</span> <span class="n">n_top_genes</span><span class="o">=</span><span class="mi">5_000</span><span class="p">,</span> <span class="n">batch_key</span><span class="o">=</span><span class="s2">&quot;sample_id&quot;</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">gex_hvg</span> <span class="o">=</span> <span class="n">gex</span><span class="p">[:,</span> <span class="n">gex</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;highly_variable&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 </span></code></pre></div>
-<p>Then recompute M2 — see <a href="../recompute-m2-after-subsetting/">Recompute M2 after subsetting</a>.</p>
-<h2 id="large-cohorts-memory-considerations">Large cohorts: memory considerations<a class="headerlink" href="#large-cohorts-memory-considerations" title="Permanent link">&para;</a></h2>
-<p>Each sample's junction matrix is fully loaded into memory before merging. For cohorts with many samples, memory scales with the total number of unique junctions times total cells. As a rough guide:</p>
-<table>
-<thead>
-<tr>
-<th>Samples</th>
-<th>Cells / sample</th>
-<th>Unique junctions</th>
-<th>Peak RAM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>2</td>
-<td>5 000</td>
-<td>50 000</td>
-<td>~500 MB</td>
-</tr>
-<tr>
-<td>10</td>
-<td>5 000</td>
-<td>80 000</td>
-<td>~4 GB</td>
-</tr>
-<tr>
-<td>50</td>
-<td>5 000</td>
-<td>120 000</td>
-<td>~20 GB</td>
-</tr>
-</tbody>
-</table>
-<p>If memory is a constraint, load samples individually, subset to high-quality junctions, then merge the subsets. The function does not support on-disk streaming; that is planned for v2.0.</p>
+<hr />
+<h2 id="4-align-cells-across-modalities">4. Align cells across modalities<a class="headerlink" href="#4-align-cells-across-modalities" title="Permanent link">&para;</a></h2>
+<p>Use set-intersection on <code>obs_names</code>. All three readers guarantee
+<code>&lt;barcode&gt;-&lt;sample_id&gt;</code> names, so the intersection is barcode-level exact:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">common</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nb">set</span><span class="p">(</span><span class="n">spl_hve</span><span class="o">.</span><span class="n">obs_names</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">gex_hvg</span><span class="o">.</span><span class="n">obs_names</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">vel</span><span class="o">.</span><span class="n">obs_names</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">spl_hve</span>  <span class="o">=</span> <span class="n">spl_hve</span><span class="p">[</span><span class="n">common</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">gex_hvg</span>  <span class="o">=</span> <span class="n">gex_hvg</span><span class="p">[</span><span class="n">common</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">vel_c</span>    <span class="o">=</span> <span class="n">vel</span><span class="p">[</span><span class="n">common</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">common</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells in common across all three modalities&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h2 id="5-pass-to-a-joint-model">5. Pass to a joint model<a class="headerlink" href="#5-pass-to-a-joint-model" title="Permanent link">&para;</a></h2>
+<h3 id="option-a-multigedipymultigedimodel">Option A — <code>multigedipy.MultiGEDIModel</code><a class="headerlink" href="#option-a-multigedipymultigedimodel" title="Permanent link">&para;</a></h3>
+<p>This is the pattern used in <code>validation/e2e/run_multimodal_pipeline.py</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">multigedipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiGEDIModel</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">sample_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">spl_hve</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;sample_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Transpose to features × cells (multigedipy convention).</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">M1</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">spl_hve</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;M1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">M2</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">spl_hve</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;M2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">G</span>  <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">gex_hvg</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">model</span> <span class="o">=</span> <span class="n">MultiGEDIModel</span><span class="p">(</span><span class="n">K</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;Bsphere&quot;</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">model</span><span class="o">.</span><span class="n">add_modality</span><span class="p">(</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="s2">&quot;gene_expression&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">G</span><span class="p">,</span> <span class="n">sample_vec</span><span class="o">=</span><span class="n">sample_vec</span><span class="p">,</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">obs_type</span><span class="o">=</span><span class="s2">&quot;M&quot;</span><span class="p">,</span> <span class="n">orthoZ</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">)</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">model</span><span class="o">.</span><span class="n">add_modality</span><span class="p">(</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="s2">&quot;splicing&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(</span><span class="n">M1</span><span class="p">,</span> <span class="n">M2</span><span class="p">),</span> <span class="n">sample_vec</span><span class="o">=</span><span class="n">sample_vec</span><span class="p">,</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="n">obs_type</span><span class="o">=</span><span class="s2">&quot;M_list&quot;</span><span class="p">,</span> <span class="n">orthoZ</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">is_si_fixed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="p">)</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">iterations</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="n">Z</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_Z</span><span class="p">()</span>   <span class="c1"># (n_cells, K) latent factors</span>
+</span></code></pre></div>
+<h3 id="option-b-scvelo-velocity-on-aligned-cells">Option B — scvelo velocity on aligned cells<a class="headerlink" href="#option-b-scvelo-velocity-on-aligned-cells" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">scvelo</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">scv</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">scv</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">filter_and_normalize</span><span class="p">(</span><span class="n">vel_c</span><span class="p">)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">scv</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">moments</span><span class="p">(</span><span class="n">vel_c</span><span class="p">)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">scv</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">velocity</span><span class="p">(</span><span class="n">vel_c</span><span class="p">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">scv</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">velocity_graph</span><span class="p">(</span><span class="n">vel_c</span><span class="p">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">scv</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">velocity_embedding_stream</span><span class="p">(</span><span class="n">vel_c</span><span class="p">,</span> <span class="n">basis</span><span class="o">=</span><span class="s2">&quot;umap&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h2 id="notes-on-modality-alignment">Notes on modality alignment<a class="headerlink" href="#notes-on-modality-alignment" title="Permanent link">&para;</a></h2>
+<p><strong><code>obs_names</code> are globally unique by construction.</strong> The <code>&lt;barcode&gt;-&lt;sample_id&gt;</code>
+scheme means two cells from different samples that happen to share the same
+16-mer barcode become distinct entries (<code>ACGT…-s1</code> vs <code>ACGT…-s2</code>). Set
+intersection is therefore unambiguous — no secondary key is needed.</p>
+<p><strong><code>obs["sample_id"]</code> is preserved across subsetting.</strong> After
+<code>adata = adata[common].copy()</code>, <code>adata.obs["sample_id"]</code> still holds the
+correct per-cell sample label, suitable for use as a batch key in
+downstream tools (<code>batch_key="sample_id"</code> in <code>scanpy.pp.highly_variable_genes</code>,
+<code>sc.pp.combat</code>, <code>scvi.model.SCVI</code>, etc.).</p>
+<p><strong>M2 validity after var-axis subsetting.</strong> If you subset the splicing AnnData
+on the var axis (e.g. <code>spl[:, mask]</code>), <code>adata.uns["splikit"]["m2_valid"]</code>
+flips to <code>False</code>. Always call <code>splk.tl.make_m2</code> again on the subsetted object
+before passing M2 downstream. See
+<a href="../recompute-m2-after-subsetting/">Recompute M2 after subsetting</a> for details.</p>
 
 
 
