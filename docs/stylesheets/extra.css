@@ -124,6 +124,23 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Logo — white pill in dark mode so black-on-white hex stays legible */
+/* ------------------------------------------------------------------ */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 32px;
+  width: auto;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .md-header__button.md-logo img {
+  background-color: rgba(255, 255, 255, 0.92);
+  padding: 3px 4px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------------------ */
 /* Frosted-glass header                                                */
 /* ------------------------------------------------------------------ */
 .md-header {

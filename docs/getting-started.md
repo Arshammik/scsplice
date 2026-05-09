@@ -157,9 +157,63 @@ adata_hve = adata[:, adata.var["highly_variable"]].copy()
 
 ---
 
+## Gene expression and velocity readers
+
+If you need gene counts or RNA velocity in the same pipeline, two additional readers produce AnnData objects with aligned `obs_names` so you can intersect cells across modalities:
+
+```python
+# Gene-expression AnnData (counts in X, drop-in for scanpy)
+gex = splk.io.read_starsolo_gene(
+    sample_dirs=["sample1", "sample2"],
+    sample_ids=["s1", "s2"],
+    var_names="gene_ids",       # default; Ensembl IDs as var_names
+    verbose=True,
+)
+# Ready for: sc.pp.normalize_total(gex), sc.pp.highly_variable_genes(gex)
+
+# Velocyto AnnData (spliced / unspliced / ambiguous in layers, drop-in for scvelo)
+vel = splk.io.read_starsolo_velocyto(
+    sample_dirs=["sample1", "sample2"],
+    sample_ids=["s1", "s2"],
+)
+# Ready for: scv.pp.filter_and_normalize(vel), scv.tl.velocity(vel)
+```
+
+Because all three readers use the same `(sample_dirs, sample_ids)` inputs and produce `<barcode>-<sample_id>` `obs_names`, aligning modalities is a simple intersection:
+
+```python
+common = sorted(set(adata.obs_names) & set(gex.obs_names) & set(vel.obs_names))
+adata, gex, vel = adata[common].copy(), gex[common].copy(), vel[common].copy()
+```
+
+### Spatial / Visium samples
+
+Pass a `tissue_positions.csv` from Space Ranger to any reader to populate squidpy-compatible spatial metadata:
+
+```python
+vis = splk.io.read_starsolo_gene(
+    sample_dirs=["visium_sample"],
+    sample_ids=["vis1"],
+    tissue_positions=["visium_sample/outs/tissue_positions.csv"],
+    spatial_library_ids=["vis1"],
+)
+# Populated: obs["in_tissue"], obs["array_row"], obs["array_col"]
+#            obsm["spatial"]  — (n_obs, 2) float64 pixel coordinates
+#            uns["spatial"]["vis1"]  — squidpy-shaped scaffold
+
+import squidpy as sq
+sq.pl.spatial_scatter(vis, color="in_tissue")
+```
+
+See [Read spatial data with tissue_positions](how-to/read-spatial-data-with-tissue-positions.md) for the full how-to, including multi-sample mixed spatial / non-spatial concat and Space Ranger v1 vs v2 CSV detection.
+
+---
+
 ## Next steps
 
 - [Tutorials](tutorials/index.md) — end-to-end walkthrough on real STARsolo output
 - [Multi-sample ingestion](how-to/multi-sample-ingestion.md) — passing multiple directories
 - [Recompute M2 after subsetting](how-to/recompute-m2-after-subsetting.md) — why you must call `make_m2` again after `adata = adata[:, mask]`
+- [Read spatial data with tissue_positions](how-to/read-spatial-data-with-tissue-positions.md) — Visium, squidpy, mixed-sample concat
+- [Multi-modal pipeline](how-to/multi-modal-pipeline.md) — feeding all three readers into a joint model
 - [Data model](explanation/data-model.md) — the LJV concept, `_S` / `_E` suffixes, why `group_id` is dense

@@ -14,9 +14,10 @@ theme:
   font:
     text: Inter
     code: JetBrains Mono
+  logo: assets/logo.png
+  favicon: assets/favicon-96x96.png
   icon:
     repo: fontawesome/brands/github
-    logo: material/dna
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -114,6 +115,8 @@ nav:
   - How-to guides:
     - Recompute M2 after subsetting: how-to/recompute-m2-after-subsetting.md
     - Multi-sample ingestion: how-to/multi-sample-ingestion.md
+    - Read spatial data with tissue_positions: how-to/read-spatial-data-with-tissue-positions.md
+    - Multi-modal pipeline: how-to/multi-modal-pipeline.md
   - Reference:
     - reference/index.md
     - Input / output: reference/io.md

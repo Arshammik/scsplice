@@ -15,10 +15,14 @@ Single-cell alternative-splicing analysis for the [scverse](https://scverse.org)
 
 | Function | Module | Purpose |
 |---|---|---|
-| `read_starsolo` | `splikit.io` | Ingest STARsolo `Solo.out/SJ/` for one or more samples into a splicing AnnData |
+| `read_starsolo` | `splikit.io` | Ingest STARsolo `Solo.out/SJ/` for one or more samples into a splicing AnnData. Supports `tissue_positions=` for Visium / spatial samples. |
+| `read_starsolo_gene` | `splikit.io` | Ingest `Solo.out/Gene/` into a cell × gene AnnData with raw counts in `X`. Drop-in for `scanpy.pp.normalize_total` and `scvi-tools`. Supports `tissue_positions=` and squidpy `obsm["spatial"]`. |
+| `read_starsolo_velocyto` | `splikit.io` | Ingest `Solo.out/Velocyto/` into an AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`. Handles both modern (split-file) and legacy (stacked `matrix.mtx`) STARsolo wire formats. Drop-in for `scvelo`. |
 | `make_m2` | `splikit.tl` | Build the exclusion matrix M2 from M1 and LJV `group_id` (C++ kernel, OpenMP-parallel) |
 | `highly_variable_events` | `splikit.pp` | Select highly variable splicing events via per-library binomial deviance |
 | `pseudo_correlation` | `splikit.tl` | Per-event signed pseudo-R² (Cox-Snell / Nagelkerke) against an external predictor matrix |
+
+All three readers share the same `(sample_dirs, sample_ids)` call shape and produce AnnDatas with identical `obs_names`, making multi-modal pipelines a clean set-intersection.
 
 ---
 
@@ -50,6 +54,10 @@ See [Getting started](getting-started.md) for the full install and walkthrough.
 
 ## Status
 
-Pre-alpha (v0.1.0.dev0). v1.0 scope is the four functions in the table above. API may change before 1.0.
+Pre-alpha (v0.1.0.dev0). v1.0 scope is the six functions in the table above. API may change before 1.0.
 
 **R package:** [splikit (CRAN)](https://github.com/csglab/splikit) — same algorithm, R / AnnData-agnostic design.
+
+---
+
+*Brand note: the hexagonal seagull logo is the original R splikit artwork, shared between both packages to signal that the Python and R implementations are the same algorithm with a unified brand. In dark mode the logo is rendered on a white pill background so the black-on-white illustration remains legible against the dark site background.*

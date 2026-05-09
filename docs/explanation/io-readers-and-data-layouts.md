@@ -57,8 +57,8 @@ type. `splikit.io` ships one reader for each, with a consistent API shape.
 | Function                     | STARsolo source                                | Output shape                                                                      | Status |
 |---|---|---|---|
 | `splk.io.read_starsolo`      | `Solo.out/SJ/raw/` + `<sample_root>/SJ.out.tab` + `Solo.out/Gene/filtered/barcodes.tsv` (whitelist) | AnnData with `layers["M1"]`, `layers["M2"]`; events on `var`                       | **Implemented** |
-| `splk.io.read_starsolo_gene` | `Solo.out/Gene/filtered/`                       | AnnData with raw counts in `X` (single matrix); genes on `var`                    | **Planned** |
-| `splk.io.read_starsolo_velocyto` | `Solo.out/Velocyto/raw/`                    | AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`; genes on `var` | **Planned** |
+| `splk.io.read_starsolo_gene` | `Solo.out/Gene/{raw,filtered}/`                 | AnnData with raw counts in `X` (single matrix); genes on `var`                    | **Implemented** (`src/splikit/io/_starsolo_gene.py`) |
+| `splk.io.read_starsolo_velocyto` | `Solo.out/Velocyto/raw/`                    | AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`; genes on `var` | **Implemented** (`src/splikit/io/_starsolo_velocyto.py`) |
 
 All three share:
 
@@ -199,11 +199,19 @@ Three paired layers on the gene axis. `X` is set to a copy of `layers["spliced"]
 so callers that only know about `X` (some scvelo helpers) work transparently;
 callers that need the unspliced and ambiguous slabs reach into `layers`.
 
-**STARsolo's MTX wire format is unusual here.** `Solo.out/Velocyto/raw/matrix.mtx`
-contains all three matrices stacked: rows `[0, n_genes)` are spliced, rows
-`[n_genes, 2 * n_genes)` are unspliced, rows `[2 * n_genes, 3 * n_genes)` are
-ambiguous. The reader parses this into the three layers above. This is the same
-unpacking scvelo's loaders do when they read STARsolo Velocyto output.
+**STARsolo Velocyto ships two on-disk wire formats, and the reader handles both.**
+
+- **Modern (STARsolo 2.7.10b+, split files):** three sibling files
+  `spliced.mtx`, `unspliced.mtx`, `ambiguous.mtx` in `Velocyto/raw/`. Each
+  is an independent genes × cells matrix.
+- **Legacy (stacked):** a single `matrix.mtx` with `3 * n_genes` rows.
+  Rows `[0, n_genes)` are spliced, `[n_genes, 2 * n_genes)` are unspliced,
+  `[2 * n_genes, 3 * n_genes)` are ambiguous. This was the original STARsolo
+  Velocyto layout and is what older scvelo loaders expect.
+
+Detection is purely structural: presence of `spliced.mtx` in `raw/` selects
+the split layout; otherwise the stacked `matrix.mtx` path is used. No
+configuration is needed — the reader auto-detects.
 
 **Drop-in for scvelo:**
 
@@ -360,10 +368,10 @@ exact reason; we use them as intended.
 | Reader                       | Status         | Tests | R-equivalence |
 |---|---|---|---|
 | `splk.io.read_starsolo`      | Implemented (`src/splikit/io/_starsolo.py`) | 11 synthetic + bit-exact e2e on real samples on `validation` branch | Bit-exact M1, M2, eventdata vs `splikit::make_junction_ab + make_m1 + make_m2` |
-| `splk.io.read_starsolo_gene` | Planned        | TBD                                              | Mechanical I/O; R parity by construction |
-| `splk.io.read_starsolo_velocyto` | Planned    | TBD                                              | Mechanical I/O; R parity by construction |
+| `splk.io.read_starsolo_gene` | Implemented (`src/splikit/io/_starsolo_gene.py`) | Mechanical I/O; R parity by construction | Mechanical I/O; R parity by construction |
+| `splk.io.read_starsolo_velocyto` | Implemented (`src/splikit/io/_starsolo_velocyto.py`) | Handles both split-file and stacked wire formats | Mechanical I/O; R parity by construction |
 
-The two planned readers follow the same internal layout as `_starsolo.py`:
+All three readers follow the same internal layout as `_starsolo.py`:
 
 ```
 src/splikit/io/_<reader>.py
@@ -392,6 +400,94 @@ layer for gene, three for velocyto, two-plus-LJV-grouping for SJ).
   specifically. Users with other formats use `scanpy.read_*` and assemble
   the splikit-py-shaped AnnData manually (the schema is documented above
   in full).
+
+---
+
+## Spatial / tissue_positions and squidpy compatibility
+
+All three readers accept a `tissue_positions=` argument that wires squidpy-compatible
+spatial metadata into the AnnData. This section documents the precedence logic,
+the `obsm["spatial"]` contract, and why spatial samples *must* read from `raw/`
+rather than `filtered/`.
+
+### Whitelist precedence per sample
+
+The `_whitelist.py` module enforces a strict four-level precedence per sample:
+
+1. **`tissue_positions[i]`** — Space Ranger `tissue_positions[_list].csv`. Its
+   barcodes become the whitelist (read from `raw/`), and the six columns populate
+   spatial obs/obsm/uns.
+2. **`barcode_whitelists[i]`** — explicit per-sample list or file (read from `raw/`).
+3. **`use_internal_whitelist=True`** and `Solo.out/Gene/filtered/barcodes.tsv`
+   exists — read from `filtered/` directly.
+4. **Otherwise** — no whitelist; use the full `raw/` barcode set.
+
+When rule 1 or 2 fires, the reader sources counts from `raw/` (the full set) and
+intersects with the supplied whitelist *after* loading. This is necessary for spatial
+samples: the tissue-position whitelist is derived from spatial spot coordinates and
+may include barcodes that STARsolo's internal `filtered/` emitter excluded (e.g.
+because they fell below the knee-point threshold but are valid tissue barcodes).
+
+!!! warning "Filtered-only reads can drop valid spatial barcodes"
+    If you call any reader with `use_internal_whitelist=True` and no
+    `tissue_positions=`, the reader will use STARsolo's `filtered/` set, which is
+    determined by an unsupervised knee-point algorithm on per-barcode UMI counts.
+    For Visium data, some tissue spots genuinely have low UMI counts and will be
+    dropped by the knee-point filter. Always pass `tissue_positions=` for spatial
+    samples so the whitelist is derived from the spot grid, not the UMI distribution.
+
+### The squidpy `obsm["spatial"]` contract
+
+When any sample provides `tissue_positions`, the merged AnnData receives:
+
+| Slot | Dtype | Description |
+|---|---|---|
+| `obs["in_tissue"]` | `int8` | `1` if spot is in tissue, `0` if fiducial or background |
+| `obs["array_row"]` | `int32` | Visium row index (hex-grid row) |
+| `obs["array_col"]` | `int32` | Visium column index (hex-grid column) |
+| `obsm["spatial"]` | `float64 (n_obs, 2)` | `[pxl_row_in_fullres, pxl_col_in_fullres]` — full-resolution pixel coordinates |
+| `uns["spatial"][library_id]` | `dict` | Minimal squidpy scaffold; `library_id` defaults to `sample_id` |
+
+This layout is exactly what `squidpy.pl.spatial_scatter` and
+`squidpy.gr.spatial_neighbors` expect — no adapter code required.
+
+Cells from non-spatial samples in a mixed-sample concat receive sentinel values:
+`in_tissue=-1`, `array_row=-1`, `array_col=-1`, and `obsm["spatial"][i] = (-1.0, -1.0)`.
+Filter with `adata[adata.obs["in_tissue"] >= 0]` to subset to spatial cells only.
+
+### Space Ranger v1 vs v2 CSV auto-detection
+
+Space Ranger changed the `tissue_positions` file format between versions:
+
+=== "Space Ranger 2.x (header present)"
+
+    File: `tissue_positions.csv`
+
+    ```
+    barcode,in_tissue,array_row,array_col,pxl_row_in_fullres,pxl_col_in_fullres
+    AAACAAGTATCTCCCA-1,1,50,102,7478,8500
+    AAACACCAATAACTGC-1,1,59,19,8663,2784
+    ...
+    ```
+
+    The reader detects the header automatically (first cell is `"barcode"`).
+
+=== "Space Ranger 1.x (no header)"
+
+    File: `tissue_positions_list.csv`
+
+    ```
+    AAACAAGTATCTCCCA-1,1,50,102,7478,8500
+    AAACACCAATAACTGC-1,1,59,19,8663,2784
+    ...
+    ```
+
+    No header; six columns in fixed order. The reader detects this format by
+    checking whether the first value in the first column looks like a barcode
+    (not `"barcode"`).
+
+Both are handled by `_whitelist.load_tissue_positions`. Pass the file path
+directly; the detection is opaque to the caller.
 
 ---
 
