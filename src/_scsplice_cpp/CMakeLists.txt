@@ -5,10 +5,10 @@
 # clang rejects the x86-only flags; let the compiler pick its own defaults
 # there. Vectorisation is enabled by default at -O2/-O3 on every supported
 # compiler regardless of these flags.
-set(SPLIKIT_CXX_OPTS "")
+set(SCSPLICE_CXX_OPTS "")
 if(NOT MSVC)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|i[3-6]86)")
-        list(APPEND SPLIKIT_CXX_OPTS
+        list(APPEND SCSPLICE_CXX_OPTS
             -march=nocona
             -mtune=haswell
             -ftree-vectorize
@@ -18,30 +18,32 @@ if(NOT MSVC)
     # enables auto-vectorisation on every supported compiler.
 endif()
 
-pybind11_add_module(_splikit_cpp
+pybind11_add_module(_scsplice_cpp
     bindings.cpp
     make_m2.cpp
     deviance.cpp
     pseudo_r2.cpp
 )
 
-target_link_libraries(_splikit_cpp PRIVATE Eigen3::Eigen)
+target_link_libraries(_scsplice_cpp PRIVATE Eigen3::Eigen)
 
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(_splikit_cpp PRIVATE OpenMP::OpenMP_CXX)
-    target_compile_definitions(_splikit_cpp PRIVATE SPLIKIT_USE_OPENMP)
+    target_link_libraries(_scsplice_cpp PRIVATE OpenMP::OpenMP_CXX)
+    target_compile_definitions(_scsplice_cpp PRIVATE SCSPLICE_USE_OPENMP)
 endif()
 
-target_compile_options(_splikit_cpp PRIVATE ${SPLIKIT_CXX_OPTS})
+target_compile_options(_scsplice_cpp PRIVATE ${SCSPLICE_CXX_OPTS})
 
 # Hidden visibility + sibling-.so RPATH; small wheels, no symbol clashes
-set_target_properties(_splikit_cpp PROPERTIES
+set_target_properties(_scsplice_cpp PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH ON
 )
 if(APPLE)
-    set_target_properties(_splikit_cpp PROPERTIES INSTALL_RPATH "@loader_path")
+    set_target_properties(_scsplice_cpp PROPERTIES INSTALL_RPATH "@loader_path")
 elseif(UNIX)
-    set_target_properties(_splikit_cpp PROPERTIES INSTALL_RPATH "$ORIGIN")
+    set_target_properties(_scsplice_cpp PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-install(TARGETS _splikit_cpp DESTINATION splikit)
+# DESTINATION is the Python package directory (still `splikit/` at this step;
+# renamed to `scsplice/` in the follow-up Python rename commit).
+install(TARGETS _scsplice_cpp DESTINATION splikit)

@@ -81,7 +81,7 @@ archs = ["x86_64", "arm64"]
 # cibuildwheel — per-arch OpenMP_ROOT export across x86_64/arm64 is brittle
 # and ST builds are bit-identical to MT for this kernel (disjoint per-row
 # writes; see CLAUDE.md determinism contract).
-environment = { CMAKE_ARGS = "-DSPLIKIT_DISABLE_OPENMP=ON" }
+environment = { CMAKE_ARGS = "-DSCSPLICE_DISABLE_OPENMP=ON" }
 
 # Per-arch MACOSX_DEPLOYMENT_TARGET: arm64 wheels need >= 11.0; 10.15 is
 # x86_64-only.

@@ -19,14 +19,14 @@ __all__ = ["pseudo_correlation"]
 
 def _import_extension():
     try:
-        from splikit import _splikit_cpp  # noqa: PLC0415
+        from splikit import _scsplice_cpp  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
-            "splikit's C++ extension (_splikit_cpp) is not built. "
+            "splikit's C++ extension (_scsplice_cpp) is not built. "
             "Run `pip install -e .` (or install a wheel) in an environment "
             "with Eigen3 available."
         ) from exc
-    return _splikit_cpp
+    return _scsplice_cpp
 
 
 def pseudo_correlation(

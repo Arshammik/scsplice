@@ -1,4 +1,4 @@
-// splikit-py C++ extension — pybind11 module entry point.
+// scsplice C++ extension — pybind11 module entry point.
 //
 // All long-running kernels release the GIL via py::call_guard<py::gil_scoped_release>().
 
@@ -12,28 +12,28 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(_splikit_cpp, m) {
-    m.doc() = "splikit-py C++ kernels (Eigen + OpenMP)";
+PYBIND11_MODULE(_scsplice_cpp, m) {
+    m.doc() = "scsplice C++ kernels (Eigen + OpenMP)";
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
     m.attr("__openmp__") = true;
 #else
     m.attr("__openmp__") = false;
 #endif
 
-    m.def("make_m2", &splikit::make_m2,
+    m.def("make_m2", &scsplice::make_m2,
           py::arg("M1"), py::arg("group_ids"), py::arg("n_threads") = 1,
           "Build the LJV exclusion matrix M2 from M1 and a dense 0..G-1 group_ids vector.\n"
           "M1 is scipy.sparse.csc_matrix (events x cells layout), group_ids is int32.",
           py::call_guard<py::gil_scoped_release>());
 
-    m.def("calc_deviances_ratio", &splikit::calc_deviances_ratio,
+    m.def("calc_deviances_ratio", &scsplice::calc_deviances_ratio,
           py::arg("M1"), py::arg("M2"), py::arg("n_threads") = 1,
           "Per-event ratio binomial deviance for one library (M1 + M2 sub-matrices, "
           "events x cells layout, scipy.sparse.csc_matrix float64).",
           py::call_guard<py::gil_scoped_release>());
 
-    m.def("pseudo_correlation", &splikit::pseudo_correlation,
+    m.def("pseudo_correlation", &scsplice::pseudo_correlation,
           py::arg("Z"), py::arg("M1"), py::arg("M2"), py::arg("metric"),
           py::arg("n_threads") = 1,
           "Per-event signed pseudo-correlation (Cox-Snell or Nagelkerke) via "

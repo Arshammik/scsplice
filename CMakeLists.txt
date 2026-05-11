@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(splikit_cpp LANGUAGES CXX)
+project(scsplice_cpp LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,7 +16,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # Optional build switch: skip OpenMP entirely (useful on macOS where libomp
 # discovery from cibuildwheel is fragile — see wheels.yml).
-option(SPLIKIT_DISABLE_OPENMP "Disable OpenMP even when CMake can find it" OFF)
+option(SCSPLICE_DISABLE_OPENMP "Disable OpenMP even when CMake can find it" OFF)
 
 # Find Python (Development.Module is the right component for pybind11_add_module)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
@@ -46,8 +46,8 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 NO_MODULE REQUIRED)
 
 # OpenMP (optional); kernels degrade gracefully when absent.
-if(NOT SPLIKIT_DISABLE_OPENMP)
+if(NOT SCSPLICE_DISABLE_OPENMP)
     find_package(OpenMP)
 endif()
 
-add_subdirectory(src/_splikit_cpp)
+add_subdirectory(src/_scsplice_cpp)

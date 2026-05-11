@@ -7,11 +7,11 @@
 #include <string>
 #include <vector>
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
 #include <omp.h>
 #endif
 
-namespace splikit {
+namespace scsplice {
 
 using SpMat = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 using SpMatRM = Eigen::SparseMatrix<double, Eigen::RowMajor>;
@@ -274,7 +274,7 @@ pseudo_correlation(const Eigen::Ref<const Eigen::MatrixXd>& Z,
     M1_rm.makeCompressed();
     M2_rm.makeCompressed();
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
     if (n_threads > 1) {
         #pragma omp parallel num_threads(n_threads)
         {
@@ -296,4 +296,4 @@ pseudo_correlation(const Eigen::Ref<const Eigen::MatrixXd>& Z,
     return result;
 }
 
-}  // namespace splikit
+}  // namespace scsplice

@@ -4,7 +4,7 @@
 #include <Eigen/SparseCore>
 #include <string>
 
-namespace splikit {
+namespace scsplice {
 
 // Per-event signed pseudo-correlation between an external Z predictor and the
 // M1/(M1+M2) ratio.
@@ -38,4 +38,4 @@ pseudo_correlation(const Eigen::Ref<const Eigen::MatrixXd>& Z,
                    const std::string& metric,
                    int n_threads);
 
-}  // namespace splikit
+}  // namespace scsplice
