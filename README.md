@@ -77,11 +77,16 @@ edits take effect immediately.
 import splikit as splk
 import scanpy as sc
 
+# (1) Ingest STARsolo splice-junction counts (M1) and LJV grouping
 adata = splk.io.read_starsolo(
     sj_dirs=["sample1/Solo.out/SJ", "sample2/Solo.out/SJ"],
     sample_ids=["s1", "s2"],
 )
+
+# (2) Build exclusion matrix (M2) from inclusion counts + junction grouping
 splk.tl.make_m2(adata, n_threads=8)
+
+# (3) Identify highly variable events per library using binomial deviance
 splk.pp.highly_variable_events(adata, min_row_sum=50, n_threads=8)
 
 # Optional: compose with scanpy on the splicing embedding
@@ -95,6 +100,17 @@ fixed reference dataset (M2 bit-exact; HVE deviance `rtol=1e-10`;
 pseudo-correlation `rtol=1e-7`). The cross-language regression suite,
 R reference fixtures, and end-to-end M1/M2 validation pipeline live on the
 [`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
+
+## Documentation
+
+Full documentation is available at https://arshammik.github.io/splikitpy/.
+
+Topics include:
+- [Getting Started](https://arshammik.github.io/splikitpy/getting-started/) — installation and first workflow
+- [Tutorials](https://arshammik.github.io/splikitpy/tutorials/) — step-by-step notebooks
+- [How-to Guides](https://arshammik.github.io/splikitpy/how-to-guides/) — recipes for common tasks
+- [Reference](https://arshammik.github.io/splikitpy/reference/) — complete API documentation
+- [Explanation](https://arshammik.github.io/splikitpy/explanation/) — conceptual background and design
 
 ## License
 

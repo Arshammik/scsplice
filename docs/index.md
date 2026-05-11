@@ -43,6 +43,12 @@ See [Getting started](getting-started.md) for the full install and walkthrough.
 
 ---
 
+## Acknowledgements
+
+`splikit-py` is a Python port of the R package [splikit](https://github.com/csglab/splikit), developed by the Computational and Statistical Genomics (CSG) Laboratory at McGill University. We gratefully acknowledge the original R splikit authors and the CSG Lab for the foundational algorithm and reference implementation.
+
+---
+
 ## Design principles
 
 - **AnnData-native.** Junctions are `var`, cells are `obs`, M1 and M2 are `layers`. No custom objects — `scanpy`, `scvi-tools`, and the rest of the ecosystem work on the output without adapters.

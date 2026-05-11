@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "splikit-py"
-version = "0.1.0.dev0"
+version = "1.0.0"
 description = "Single-cell alternative-splicing analysis on AnnData (Python port of R splikit)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["single-cell", "splicing", "scverse", "anndata", "scrna-seq"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.10",
-    "numpy>=2.0",
+    "numpy>=2.0",  # v2.0+ for maintenance support; no 2.0-specific features used
     "scipy>=1.13",
     "pandas>=2.2",
     "h5py>=3.10",
@@ -53,8 +53,10 @@ dev = [
 ]
 
 [project.urls]
+Documentation = "https://arshammik.github.io/splikitpy/"
 Homepage = "https://github.com/Arshammik/splikitpy"
 Issues = "https://github.com/Arshammik/splikitpy/issues"
+Changelog = "https://github.com/Arshammik/splikitpy/blob/main/CHANGELOG.md"
 Source = "https://github.com/Arshammik/splikitpy"
 
 [tool.scikit-build]
@@ -68,14 +70,37 @@ build-dir = "build/{wheel_tag}"
 build = "cp310-* cp311-* cp312-*"
 skip = "*-musllinux_*"
 build-frontend = "build"
-test-command = "python -c \"import splikit; print(splikit.__version__)\""
+# Smoke test: actually invoke a kernel so we catch ABI/linkage drift at
+# wheel-build time, not just an importable extension.
+test-requires = ["numpy", "scipy", "anndata", "pandas"]
+test-command = """python -c "import numpy as np, scipy.sparse as sp, anndata as ad, pandas as pd, splikit; M1 = sp.csc_matrix(np.array([[1.0,0.0],[0.0,2.0],[3.0,0.0]])); var = pd.DataFrame({'chr':['chr1']*3,'start':[0,100,200],'end':[50,150,250],'strand':['+']*3,'row_names_mtx':['chr1:0-50','chr1:100-150','chr1:200-250'],'group_id':np.array([0,0,1],dtype=np.int32),'group_kind':pd.Categorical(['S']*3,categories=['S','E']),'group_count':np.array([2,2,1],dtype=np.int32)},index=['chr1:0-50_S','chr1:100-150_S','chr1:200-250_S']); obs = pd.DataFrame({'barcode':['bc0','bc1'],'sample_id':['s1','s1']},index=['bc0','bc1']); a = ad.AnnData(layers={'M1': M1.T.tocsc()},obs=obs,var=var); a.uns['splikit'] = {'m2_valid': False}; splikit.tl.make_m2(a); M2 = a.layers['M2']; assert sp.issparse(M2) and M2.format == 'csc' and M2.dtype == np.float64; print('splikit smoke OK', splikit.__version__)" """
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
+# OpenMP is disabled on macOS to dodge libomp discovery fragility under
+# cibuildwheel — per-arch OpenMP_ROOT export across x86_64/arm64 is brittle
+# and ST builds are bit-identical to MT for this kernel (disjoint per-row
+# writes; see CLAUDE.md determinism contract).
+environment = { CMAKE_ARGS = "-DSPLIKIT_DISABLE_OPENMP=ON" }
+
+# Per-arch MACOSX_DEPLOYMENT_TARGET: arm64 wheels need >= 11.0; 10.15 is
+# x86_64-only.
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_x86_64"
+inherit.environment = "append"
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_arm64"
+inherit.environment = "append"
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
+# manylinux_2_28 (RHEL/AlmaLinux 8 base, glibc 2.28). Stock manylinux2014
+# doesn't ship EPEL and `yum install eigen3-devel` fails; manylinux_2_28
+# + EPEL (enabled in CIBW_BEFORE_ALL_LINUX) handles eigen3-devel cleanly.
+manylinux-x86_64-image = "manylinux_2_28"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

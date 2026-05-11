@@ -25,8 +25,17 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
-          CIBW_BEFORE_ALL_LINUX: "yum install -y eigen3-devel || dnf install -y eigen3-devel"
-          CIBW_BEFORE_ALL_MACOS: "brew install eigen libomp"
+          # manylinux_2_28 (RHEL/AlmaLinux 8) -> enable EPEL for eigen3-devel.
+          # Stock manylinux2014 does NOT ship EPEL by default and the prior
+          # `yum install eigen3-devel || dnf install eigen3-devel` failed on
+          # both. manylinux_2_28 is selected in pyproject.toml.
+          CIBW_BEFORE_ALL_LINUX: "dnf install -y epel-release && dnf install -y eigen3-devel"
+          # macOS: install eigen only. libomp is intentionally NOT installed
+          # because we disable OpenMP on macOS (SPLIKIT_DISABLE_OPENMP=ON in
+          # pyproject.toml [tool.cibuildwheel.macos]) — libomp discovery
+          # across x86_64/arm64 under cibuildwheel is too fragile and per-row
+          # writes are bit-identical to MT anyway.
+          CIBW_BEFORE_ALL_MACOS: "brew install eigen"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -48,3 +57,29 @@ jobs:
         with:
           name: sdist
           path: dist/*.tar.gz
+
+  publish:
+    # Upload to PyPI on version tags (v1.0.0, etc.)
+    # Requires that the PyPI project has a Trusted Publisher configured
+    # for this GitHub repository (https://docs.pypi.org/trusted-publishers/).
+    # No API tokens are stored in secrets.
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: "wheels-*"
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
