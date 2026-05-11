@@ -18,10 +18,13 @@ namespace splikit {
 // Equivalence with R splikit::calcDeviances_ratio is np.allclose-tight, not
 // bit-exact, because std::log differs across libm/BLAS stacks.
 //
-// Port of /project/6007998/arsham79/splikit/src/calcDeviances.cpp.
+// Port of R splikit src/calcDeviances.cpp.
+//
+// Default `int` StorageIndex matches scipy.sparse.csc_matrix on the
+// pybind11 boundary.
 Eigen::VectorXd
-calc_deviances_ratio(const Eigen::SparseMatrix<double, Eigen::ColMajor, std::int64_t>& M1,
-                     const Eigen::SparseMatrix<double, Eigen::ColMajor, std::int64_t>& M2,
+calc_deviances_ratio(const Eigen::SparseMatrix<double, Eigen::ColMajor>& M1,
+                     const Eigen::SparseMatrix<double, Eigen::ColMajor>& M2,
                      int n_threads);
 
 }  // namespace splikit

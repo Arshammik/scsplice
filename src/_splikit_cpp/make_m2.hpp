@@ -13,9 +13,14 @@ namespace splikit {
 //   - thread-local indexed dense workspace (not a hash map)
 //   - explicit per-column std::sort by row index before write
 //
-// Port of /project/6007998/arsham79/splikit/src/make_m2_cpp.cpp.
-Eigen::SparseMatrix<double, Eigen::ColMajor, std::int64_t>
-make_m2(const Eigen::SparseMatrix<double, Eigen::ColMajor, std::int64_t>& M1,
+// Port of R splikit src/make_m2_cpp.cpp.
+//
+// Note: the SparseMatrix uses the default `int` StorageIndex, which is what
+// pybind11's scipy.sparse caster expects (a scipy.sparse.csc_matrix has
+// int32 indptr/indices). Mismatched StorageIndex causes either runtime
+// rejection of inputs or silent truncation.
+Eigen::SparseMatrix<double, Eigen::ColMajor>
+make_m2(const Eigen::SparseMatrix<double, Eigen::ColMajor>& M1,
         const Eigen::Ref<const Eigen::VectorXi>& group_ids,
         int n_threads);
 
