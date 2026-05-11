@@ -39,13 +39,13 @@ def validate_m1_layer(adata: ad.AnnData) -> None:
     if "M1" not in adata.layers:
         raise KeyError(
             "adata.layers['M1'] is required. Build the splicing AnnData via "
-            "splikit.io.read_starsolo()."
+            "scsplice.io.read_starsolo()."
         )
     M1 = adata.layers["M1"]
     if not sp.issparse(M1):
         raise TypeError(
             f"layers['M1'] must be scipy.sparse, got {type(M1).__name__}. "
-            "splikit-py never densifies M1; convert before assigning."
+            "scsplice never densifies M1; convert before assigning."
         )
     if M1.shape != adata.shape:
         raise ValueError(f"layers['M1'] shape {M1.shape} != adata.shape {adata.shape}")
@@ -65,7 +65,7 @@ def validate_paired_layers(adata: ad.AnnData, *, require_m2_valid: bool = True) 
     validate_m1_layer(adata)
     if "M2" not in adata.layers:
         raise KeyError(
-            "adata.layers['M2'] is required; call splikit.tl.make_m2(adata) first"
+            "adata.layers['M2'] is required; call scsplice.tl.make_m2(adata) first"
         )
     M1, M2 = adata.layers["M1"], adata.layers["M2"]
     if not sp.issparse(M2):
@@ -86,7 +86,7 @@ def validate_paired_layers(adata: ad.AnnData, *, require_m2_valid: bool = True) 
             raise RuntimeError(
                 "M2 is stale (uns['splikit']['m2_valid'] is False). "
                 "Any operation that mutated layers['M1'] or subsetted the var "
-                "axis invalidates M2. Call splikit.tl.make_m2(adata) again."
+                "axis invalidates M2. Call scsplice.tl.make_m2(adata) again."
             )
 
 

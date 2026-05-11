@@ -8,7 +8,7 @@ import anndata as ad
 import numpy as np
 import scipy.sparse as sp
 
-from splikit._core._validators import (
+from scsplice._core._validators import (
     validate_paired_layers,
     validate_var_schema,
 )
@@ -19,10 +19,10 @@ __all__ = ["pseudo_correlation"]
 
 def _import_extension():
     try:
-        from splikit import _scsplice_cpp  # noqa: PLC0415
+        from scsplice import _scsplice_cpp  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
-            "splikit's C++ extension (_scsplice_cpp) is not built. "
+            "scsplice's C++ extension (_scsplice_cpp) is not built. "
             "Run `pip install -e .` (or install a wheel) in an environment "
             "with Eigen3 available."
         ) from exc

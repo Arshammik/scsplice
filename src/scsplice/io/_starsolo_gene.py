@@ -2,7 +2,7 @@
 
 Reads ``Solo.out/Gene/{raw,filtered}/{barcodes.tsv, features.tsv, matrix.mtx}``
 for one or more samples. The reader applies the consistent whitelist
-precedence implemented in :mod:`splikit.io._whitelist`:
+precedence implemented in :mod:`scsplice.io._whitelist`:
 
     tissue_positions  >  explicit barcode_whitelist  >  internal filtered/  >  raw
 
@@ -34,8 +34,8 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from splikit.io._starsolo import _safe_mmread  # shared mmread guard
-from splikit.io._whitelist import (
+from scsplice.io._starsolo import _safe_mmread  # shared mmread guard
+from scsplice.io._whitelist import (
     ResolvedWhitelist,
     load_tissue_positions,  # re-exported for callers that want raw access
     normalize_per_sample_arg,
@@ -182,7 +182,7 @@ def _read_one_gene_sample(
 
     if verbose:
         print(
-            f"[splikit.io] Reading Gene sample {sample_id!r} from "
+            f"[scsplice.io] Reading Gene sample {sample_id!r} from "
             f"{paths.source_dir} (used_raw={paths.used_raw})"
         )
 
@@ -543,7 +543,7 @@ def read_starsolo_gene(
 
     if verbose:
         print(
-            f"[splikit.io] Built Gene AnnData: {adata.n_obs} cells × "
+            f"[scsplice.io] Built Gene AnnData: {adata.n_obs} cells × "
             f"{adata.n_vars} genes ({n} samples, X nnz={adata.X.nnz})"
         )
     return adata

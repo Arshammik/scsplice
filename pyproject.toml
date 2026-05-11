@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.5", "pybind11>=2.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "splikit-py"
+name = "scsplice"
 version = "1.0.0"
 description = "Single-cell alternative-splicing analysis on AnnData (Python port of R splikit)"
 readme = "README.md"
@@ -47,7 +47,7 @@ docs = [
     "mike>=2.1",
 ]
 dev = [
-    "splikit-py[test,docs]",
+    "scsplice[test,docs]",
     "ruff",
     "pre-commit",
 ]
@@ -60,7 +60,7 @@ Changelog = "https://github.com/Arshammik/splikitpy/blob/main/CHANGELOG.md"
 Source = "https://github.com/Arshammik/splikitpy"
 
 [tool.scikit-build]
-wheel.packages = ["src/splikit"]
+wheel.packages = ["src/scsplice"]
 cmake.build-type = "Release"
 cmake.verbose = true
 minimum-version = "0.5"
@@ -73,7 +73,7 @@ build-frontend = "build"
 # Smoke test: actually invoke a kernel so we catch ABI/linkage drift at
 # wheel-build time, not just an importable extension.
 test-requires = ["numpy", "scipy", "anndata", "pandas"]
-test-command = """python -c "import numpy as np, scipy.sparse as sp, anndata as ad, pandas as pd, splikit; M1 = sp.csc_matrix(np.array([[1.0,0.0],[0.0,2.0],[3.0,0.0]])); var = pd.DataFrame({'chr':['chr1']*3,'start':[0,100,200],'end':[50,150,250],'strand':['+']*3,'row_names_mtx':['chr1:0-50','chr1:100-150','chr1:200-250'],'group_id':np.array([0,0,1],dtype=np.int32),'group_kind':pd.Categorical(['S']*3,categories=['S','E']),'group_count':np.array([2,2,1],dtype=np.int32)},index=['chr1:0-50_S','chr1:100-150_S','chr1:200-250_S']); obs = pd.DataFrame({'barcode':['bc0','bc1'],'sample_id':['s1','s1']},index=['bc0','bc1']); a = ad.AnnData(layers={'M1': M1.T.tocsc()},obs=obs,var=var); a.uns['splikit'] = {'m2_valid': False}; splikit.tl.make_m2(a); M2 = a.layers['M2']; assert sp.issparse(M2) and M2.format == 'csc' and M2.dtype == np.float64; print('splikit smoke OK', splikit.__version__)" """
+test-command = """python -c "import numpy as np, scipy.sparse as sp, anndata as ad, pandas as pd, scsplice; M1 = sp.csc_matrix(np.array([[1.0,0.0],[0.0,2.0],[3.0,0.0]])); var = pd.DataFrame({'chr':['chr1']*3,'start':[0,100,200],'end':[50,150,250],'strand':['+']*3,'row_names_mtx':['chr1:0-50','chr1:100-150','chr1:200-250'],'group_id':np.array([0,0,1],dtype=np.int32),'group_kind':pd.Categorical(['S']*3,categories=['S','E']),'group_count':np.array([2,2,1],dtype=np.int32)},index=['chr1:0-50_S','chr1:100-150_S','chr1:200-250_S']); obs = pd.DataFrame({'barcode':['bc0','bc1'],'sample_id':['s1','s1']},index=['bc0','bc1']); a = ad.AnnData(layers={'M1': M1.T.tocsc()},obs=obs,var=var); a.uns['splikit'] = {'m2_valid': False}; scsplice.tl.make_m2(a); M2 = a.layers['M2']; assert sp.issparse(M2) and M2.format == 'csc' and M2.dtype == np.float64; print('scsplice smoke OK', scsplice.__version__)" """
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]

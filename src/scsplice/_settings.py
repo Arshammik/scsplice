@@ -1,6 +1,6 @@
-"""Global splikit-py settings (scanpy-style).
+"""Global scsplice settings (scanpy-style).
 
-A single :class:`_Settings` instance is exposed as :data:`splikit.settings`.
+A single :class:`_Settings` instance is exposed as :data:`scsplice.settings`.
 Attributes can be set directly to control package behaviour without passing
 per-call keyword arguments.
 
@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 @dataclass
 class _Settings:
-    """Mutable container for global splikit-py knobs.
+    """Mutable container for global scsplice knobs.
 
     Attributes
     ----------
@@ -32,7 +32,7 @@ class _Settings:
     n_jobs: int = 1
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic only
-        return f"splikit.settings(verbosity={self.verbosity}, n_jobs={self.n_jobs})"
+        return f"scsplice.settings(verbosity={self.verbosity}, n_jobs={self.n_jobs})"
 
 
 settings = _Settings()

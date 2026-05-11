@@ -39,7 +39,7 @@ def split_paired_by_sample(
     if sample_key not in adata.obs.columns:
         raise KeyError(
             f"adata.obs[{sample_key!r}] is required for per-sample splitting. "
-            "splikit.io.read_starsolo populates it from its sample_ids= argument; "
+            "scsplice.io.read_starsolo populates it from its sample_ids= argument; "
             "for AnnDatas built another way, set adata.obs['sample_id'] manually."
         )
 

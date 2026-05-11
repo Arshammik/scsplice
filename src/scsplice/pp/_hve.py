@@ -6,7 +6,7 @@ import anndata as ad
 import numpy as np
 import scipy.sparse as sp
 
-from splikit._core._validators import (
+from scsplice._core._validators import (
     validate_paired_layers,
     validate_var_schema,
 )
@@ -17,10 +17,10 @@ __all__ = ["highly_variable_events"]
 
 def _import_extension():
     try:
-        from splikit import _scsplice_cpp  # noqa: PLC0415
+        from scsplice import _scsplice_cpp  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
-            "splikit's C++ extension (_scsplice_cpp) is not built. "
+            "scsplice's C++ extension (_scsplice_cpp) is not built. "
             "Run `pip install -e .` (or install a wheel) in an environment "
             "with Eigen3 available."
         ) from exc
@@ -88,7 +88,7 @@ def highly_variable_events(
     if sample_key not in adata.obs.columns:
         raise KeyError(
             f"adata.obs[{sample_key!r}] is required for per-library deviance "
-            "(splikit-py replaces R splikit's barcode-regex split with an "
+            "(scsplice replaces R splikit's barcode-regex split with an "
             "explicit sample_id column)."
         )
 

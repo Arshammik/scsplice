@@ -32,9 +32,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from splikit.io._starsolo import _safe_mmread  # shared mmread guard
-from splikit.io._starsolo_gene import _read_features
-from splikit.io._whitelist import (
+from scsplice.io._starsolo import _safe_mmread  # shared mmread guard
+from scsplice.io._starsolo_gene import _read_features
+from scsplice.io._whitelist import (
     ResolvedWhitelist,
     normalize_per_sample_arg,
     resolve_whitelist,
@@ -157,7 +157,7 @@ def _read_one_velocyto_sample(
     if verbose:
         wf = "split" if paths.spliced is not None else "stacked"
         print(
-            f"[splikit.io] Reading Velocyto sample {sample_id!r} from "
+            f"[scsplice.io] Reading Velocyto sample {sample_id!r} from "
             f"{paths.source_dir} (wire_format={wf})"
         )
 
@@ -506,7 +506,7 @@ def read_starsolo_velocyto(
 
     if verbose:
         print(
-            f"[splikit.io] Built Velocyto AnnData: {adata.n_obs} cells × "
+            f"[scsplice.io] Built Velocyto AnnData: {adata.n_obs} cells × "
             f"{adata.n_vars} genes (spliced nnz={adata.layers['spliced'].nnz}, "
             f"unspliced nnz={adata.layers['unspliced'].nnz}, "
             f"ambiguous nnz={adata.layers['ambiguous'].nnz})"

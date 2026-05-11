@@ -44,6 +44,5 @@ elseif(UNIX)
     set_target_properties(_scsplice_cpp PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-# DESTINATION is the Python package directory (still `splikit/` at this step;
-# renamed to `scsplice/` in the follow-up Python rename commit).
-install(TARGETS _scsplice_cpp DESTINATION splikit)
+# DESTINATION is the Python package directory.
+install(TARGETS _scsplice_cpp DESTINATION scsplice)
