@@ -248,21 +248,50 @@ def test_read_starsolo_keep_multi_mapped_filter(tmp_path):
 
 
 def test_read_starsolo_min_counts_filters(tmp_path):
+    """min_counts drops low-count events AND enforces LJV group_count >= 2.
+
+    When filtering an LJV member drops a group's size to 1, the surviving
+    singleton is also removed (LJV semantics require >= 2 members per group)
+    and a warning is emitted.
+    """
     import splikit  # noqa: PLC0415
 
     junctions = [
-        ("chr1", 100, 200, 1, 1, 1, 5),
-        ("chr1", 100, 300, 1, 1, 0, 4),
+        # Three junctions sharing start=100: an S-group of size 3.
+        ("chr1", 100, 200, 1, 1, 1, 5),  # kept
+        ("chr1", 100, 300, 1, 1, 0, 4),  # filtered (row-sum 0)
+        ("chr1", 100, 400, 1, 1, 0, 4),  # kept
     ]
     barcodes = ["BC1", "BC2"]
-    counts = np.array([[3, 4], [0, 0]], dtype=np.int64)  # second junction all zero
+    counts = np.array(
+        [[3, 4],
+         [0, 0],   # filtered by min_counts=1
+         [2, 1]],
+        dtype=np.int64,
+    )
     sj_dir = _make_starsolo_dir(tmp_path / "s1", junctions, barcodes, counts)
 
     a = splikit.io.read_starsolo(
         sj_dir, "s1", min_counts=1, use_internal_whitelist=False
     )
-    # The all-zero junction gets row-sum 0 < 1 → dropped. Only 1 _S row survives.
-    assert a.n_vars == 1
+    # The all-zero junction is dropped (row-sum 0 < 1). The remaining two
+    # still share start=100 → S-group of size 2 → both survive.
+    assert a.n_vars == 2
+    assert (a.var["group_count"] == 2).all()
+
+    # Now a more aggressive case: the same group with TWO low-count members,
+    # leaving a single survivor → singleton dropped → 0 events.
+    junctions2 = [
+        ("chr1", 100, 200, 1, 1, 1, 5),  # kept
+        ("chr1", 100, 300, 1, 1, 0, 4),  # filtered
+    ]
+    counts2 = np.array([[3, 4], [0, 0]], dtype=np.int64)
+    sj_dir2 = _make_starsolo_dir(tmp_path / "s2", junctions2, barcodes, counts2)
+    with pytest.warns(UserWarning, match="LJV group fell to size 1"):
+        with pytest.raises(ValueError, match="no LJV-valid events"):
+            splikit.io.read_starsolo(
+                sj_dir2, "s1", min_counts=1, use_internal_whitelist=False,
+            )
 
 
 def test_read_starsolo_dimension_mismatch_raises(tmp_path):

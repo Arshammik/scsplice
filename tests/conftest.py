@@ -14,13 +14,9 @@ import scipy.sparse as sp
 
 # Real-data sandbox path; tests gated by @pytest.mark.real_data are
 # auto-skipped when the path does not exist. Override with the env var
-# ``SPLIKIT_REAL_DATA_DIR`` if your local copy lives elsewhere.
-_REAL_DATA_DIR = Path(
-    os.environ.get(
-        "SPLIKIT_REAL_DATA_DIR",
-        "/home/arsham79/projects/rrg-hsn/arsham79/alt_splicing/results/star_solo_out",
-    )
-).expanduser()
+# ``SPLIKIT_REAL_DATA_DIR`` to point to a real STARsolo output directory.
+_REAL_DATA_DIR_STR = os.environ.get("SPLIKIT_REAL_DATA_DIR")
+_REAL_DATA_DIR = Path(_REAL_DATA_DIR_STR) if _REAL_DATA_DIR_STR else None
 _REAL_DATA_SAMPLES = (
     "L8TX_181211_01_A01_S01_L003",
     "L8TX_181211_01_B01_S01_L003",
@@ -29,10 +25,10 @@ _REAL_DATA_SAMPLES = (
 
 @pytest.fixture(scope="session")
 def real_data_dir() -> Path:
-    if not _REAL_DATA_DIR.is_dir():
+    if _REAL_DATA_DIR is None or not _REAL_DATA_DIR.is_dir():
         pytest.skip(
-            f"Real-data sandbox not present at {_REAL_DATA_DIR}; set "
-            "SPLIKIT_REAL_DATA_DIR or skip @pytest.mark.real_data tests."
+            f"Real-data sandbox not found; set SPLIKIT_REAL_DATA_DIR env var "
+            "to enable @pytest.mark.real_data tests."
         )
     return _REAL_DATA_DIR
 

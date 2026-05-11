@@ -23,6 +23,7 @@ end of :func:`read_starsolo_gene`.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,9 +32,9 @@ from typing import Literal
 import anndata as ad
 import numpy as np
 import pandas as pd
-import scipy.io as sio
 import scipy.sparse as sp
 
+from splikit.io._starsolo import _safe_mmread  # shared mmread guard
 from splikit.io._whitelist import (
     ResolvedWhitelist,
     load_tissue_positions,  # re-exported for callers that want raw access
@@ -200,7 +201,7 @@ def _read_one_gene_sample(
     # whose intersection might exceed filtered/'s coverage.)
 
     # MTX is genes × cells in 10x/STARsolo convention; AnnData wants cells × genes.
-    mtx = sio.mmread(str(paths.matrix)).tocsc().astype(np.float64)
+    mtx = _safe_mmread(paths.matrix, what="Gene matrix.mtx").tocsc().astype(np.float64)
     n_genes_mtx, n_cells_mtx = mtx.shape
 
     barcodes = pd.read_csv(
@@ -220,7 +221,9 @@ def _read_one_gene_sample(
     # Apply whitelist.
     if resolved.barcodes is not None:
         wl_set = resolved.barcodes
-        keep = np.fromiter((bc in wl_set for bc in barcodes), dtype=bool, count=len(barcodes))
+        # ``pd.Index(...).isin(set)`` is ~50× faster than a Python comprehension
+        # on 6.7M barcodes and dtype-safe across str / numpy.str_ / arrow.
+        keep = np.asarray(pd.Index(barcodes).isin(wl_set), dtype=bool)
         if not keep.any():
             import warnings
             warnings.warn(
@@ -238,14 +241,12 @@ def _read_one_gene_sample(
     spatial_aligned: pd.DataFrame | None = None
     if resolved.spatial is not None:
         spatial_aligned = resolved.spatial.reindex(barcodes)
-        # Drop rows where reindex inserted NaN — those are barcodes from raw/
-        # not in tissue_positions. With raw-source filtering above, every kept
-        # barcode SHOULD be in tissue_positions; defend with an assertion.
         if spatial_aligned.isna().any().any():
             missing = int(spatial_aligned["in_tissue"].isna().sum())
-            raise RuntimeError(
-                f"Gene sample {sample_id!r}: {missing} kept barcodes have no "
-                "tissue_positions row — internal bug in whitelist filtering."
+            raise ValueError(
+                f"Gene sample {sample_id!r}: {missing} kept barcodes are not "
+                "present in tissue_positions; verify the tissue_positions file "
+                "is from the same library as the MTX."
             )
 
     return _GeneSampleArtifacts(
@@ -263,8 +264,13 @@ def _concat_gene_samples(
     sample_ids: Sequence[str],
     *,
     var_names: Literal["gene_ids", "gene_symbols"],
-) -> tuple[sp.csc_matrix, pd.DataFrame, pd.DataFrame, dict | None]:
-    """Union genes (zero-pad) and stack cell axis. Returns (X, var, obs, spatial_uns)."""
+) -> tuple[sp.csc_matrix, pd.DataFrame, pd.DataFrame, dict | None, np.ndarray | None]:
+    """Union genes (zero-pad) and stack cell axis.
+
+    Returns ``(X, var, obs, spatial_uns, spatial_arr)``. ``spatial_arr`` is
+    returned explicitly rather than smuggled through ``obs.attrs`` (which
+    is experimental and not preserved across many pandas operations).
+    """
     # Build the global gene index. Stable order: first appearance.
     # Use gene_id as the join key (always unique by design).
     seen: dict[str, dict] = {}
@@ -325,8 +331,12 @@ def _concat_gene_samples(
                     "metadata": {"source": "starsolo+tissue_positions"},
                 }
 
-    X = sp.vstack(remapped, format="csc").astype(np.float64) if remapped else \
-        sp.csc_matrix((0, n_global), dtype=np.float64)
+    # vstack in CSR (cheap) then convert once to CSC; vstacking CSC directly
+    # peaks at multi-GB on real data because CSC isn't the natural concat fmt.
+    if remapped:
+        X = sp.vstack(remapped, format="csr").tocsc().astype(np.float64)
+    else:
+        X = sp.csc_matrix((0, n_global), dtype=np.float64)
     obs = pd.concat(obs_rows, axis=0, ignore_index=True) if obs_rows else \
         pd.DataFrame({"barcode": [], "sample_id": []})
     obs["sample_id"] = obs["sample_id"].astype("category")
@@ -373,9 +383,9 @@ def _concat_gene_samples(
         spatial_arr = None
 
     spatial_uns_or_none = spatial_uns if spatial_uns else None
-    # Tag obs with the spatial array shape via the returned tuple.
-    obs.attrs["_spatial_arr"] = spatial_arr  # consumed by caller; private
-    return X, var, obs, spatial_uns_or_none
+    # Return spatial_arr explicitly rather than stashing it on obs.attrs
+    # (pandas .attrs is experimental and not preserved through most ops).
+    return X, var, obs, spatial_uns_or_none, spatial_arr
 
 
 def read_starsolo_gene(
@@ -399,7 +409,9 @@ def read_starsolo_gene(
         ``Solo.out/Gene/raw/`` / ``.../filtered/`` directly.
     sample_ids
         Per-sample unique identifier; appears in ``obs["sample_id"]`` and
-        as the ``-{sample_id}`` suffix on ``obs_names``.
+        as the ``-{sample_id}`` suffix on ``obs_names``. **Must not contain
+        ``'-'``**: the ``{barcode}-{sample_id}`` ``obs_names`` convention
+        becomes unparseable if the sample_id has an embedded hyphen.
     barcode_whitelists
         Per-sample whitelist of barcodes. ``None`` to fall back to internal
         whitelist; otherwise a path or sequence. When provided, counts are
@@ -468,8 +480,15 @@ def read_starsolo_gene(
     if len(sample_dirs) == 0:
         raise ValueError("At least one sample_dir / sample_id pair is required.")
     if len(set(sample_ids)) != len(sample_ids):
-        dup = [s for s in sample_ids if sample_ids.count(s) > 1]
-        raise ValueError(f"sample_ids must be unique; duplicates: {sorted(set(dup))}")
+        dup = sorted({s for s, c in Counter(sample_ids).items() if c > 1})
+        raise ValueError(f"sample_ids must be unique; duplicates: {dup}")
+    bad_sid = [s for s in sample_ids if "-" in s]
+    if bad_sid:
+        raise ValueError(
+            f"sample_ids must not contain '-' (the reader uses 'obs_names = "
+            f"{{barcode}}-{{sample_id}}' so embedded hyphens make the suffix "
+            f"ambiguous to parse). Offending sample_ids: {bad_sid}"
+        )
 
     n = len(sample_dirs)
     bcw = normalize_per_sample_arg(barcode_whitelists, n, name="barcode_whitelists")
@@ -489,12 +508,9 @@ def read_starsolo_gene(
             )
         )
 
-    X, var, obs, spatial_uns = _concat_gene_samples(
+    X, var, obs, spatial_uns, spatial_arr = _concat_gene_samples(
         artifacts, sample_ids, var_names=var_names,
     )
-
-    # Pop the private spatial array stash off obs before constructing AnnData.
-    spatial_arr = obs.attrs.pop("_spatial_arr", None)
 
     adata = ad.AnnData(X=X, obs=obs, var=var)
     adata.uns["splikit"] = {

@@ -21,6 +21,7 @@ copy of ``layers["spliced"]`` so scvelo helpers that only know about
 from __future__ import annotations
 
 import warnings
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,9 +30,9 @@ from typing import Literal
 import anndata as ad
 import numpy as np
 import pandas as pd
-import scipy.io as sio
 import scipy.sparse as sp
 
+from splikit.io._starsolo import _safe_mmread  # shared mmread guard
 from splikit.io._starsolo_gene import _read_features
 from splikit.io._whitelist import (
     ResolvedWhitelist,
@@ -94,6 +95,14 @@ def _resolve_velocyto_paths(sample_dir: str | Path) -> _VelPaths:
                     for m in ("spliced", "unspliced", "ambiguous"))
     has_stacked = (raw / "matrix.mtx").exists() or (raw / "matrix.mtx.gz").exists()
 
+    # Internal whitelist sits next door at Gene/filtered/barcodes.tsv. Velocyto
+    # itself only ships raw/; the filtered whitelist is the Gene/filtered/ set.
+    # Note: ``raw.parent`` is Velocyto/, so we need to step up to Solo.out/.
+    solo_out = raw.parent.parent
+    internal_wl = solo_out / "Gene" / "filtered" / "barcodes.tsv"
+    if not internal_wl.exists() and (solo_out / "Gene" / "filtered" / "barcodes.tsv.gz").exists():
+        internal_wl = solo_out / "Gene" / "filtered" / "barcodes.tsv.gz"
+
     if has_split:
         def _pick(name: str) -> Path:
             p1 = raw / f"{name}.mtx"
@@ -109,14 +118,14 @@ def _resolve_velocyto_paths(sample_dir: str | Path) -> _VelPaths:
             barcodes=bc, features=feat,
             spliced=_pick("spliced"), unspliced=_pick("unspliced"),
             ambiguous=_pick("ambiguous"),
-            stacked_matrix=None, source_dir=raw, internal_whitelist=raw.parent / "filtered" / "barcodes.tsv",
+            stacked_matrix=None, source_dir=raw, internal_whitelist=internal_wl,
         )
     if has_stacked:
         m = raw / "matrix.mtx" if (raw / "matrix.mtx").exists() else raw / "matrix.mtx.gz"
         return _VelPaths(
             barcodes=bc, features=feat,
             spliced=None, unspliced=None, ambiguous=None,
-            stacked_matrix=m, source_dir=raw, internal_whitelist=raw.parent / "filtered" / "barcodes.tsv",
+            stacked_matrix=m, source_dir=raw, internal_whitelist=internal_wl,
         )
     raise FileNotFoundError(
         f"Velocyto raw dir {raw} contains neither split (spliced/unspliced/"
@@ -125,7 +134,7 @@ def _resolve_velocyto_paths(sample_dir: str | Path) -> _VelPaths:
 
 
 def _load_split_layer(path: Path, expected_shape: tuple[int, int]) -> sp.csc_matrix:
-    m = sio.mmread(str(path)).tocsc().astype(np.float64)
+    m = _safe_mmread(path, what=f"Velocyto {path.name}").tocsc().astype(np.float64)
     if m.shape != expected_shape:
         raise ValueError(
             f"Velocyto layer {path.name} shape {m.shape} != expected "
@@ -169,7 +178,9 @@ def _read_one_velocyto_sample(
         ambiguous = _load_split_layer(paths.ambiguous, (n_genes, n_cells))
     else:
         wire_format = "stacked"
-        stacked = sio.mmread(str(paths.stacked_matrix)).tocsc().astype(np.float64)
+        stacked = _safe_mmread(
+            paths.stacked_matrix, what="Velocyto stacked matrix.mtx"
+        ).astype(np.float64)
         if stacked.shape[0] != 3 * n_genes:
             raise ValueError(
                 f"Velocyto stacked matrix.mtx in sample {sample_id!r} has "
@@ -181,9 +192,12 @@ def _read_one_velocyto_sample(
                 f"Velocyto stacked matrix.mtx col count {stacked.shape[1]} "
                 f"!= barcodes.tsv length {n_cells}"
             )
-        spliced = stacked[:n_genes, :].tocsc()
-        unspliced = stacked[n_genes:2 * n_genes, :].tocsc()
-        ambiguous = stacked[2 * n_genes:3 * n_genes, :].tocsc()
+        # Row-slicing a CSC is worst-case; convert to CSR once, slice three
+        # contiguous row blocks, then convert each layer back to CSC.
+        stacked_csr = stacked.tocsr()
+        spliced = stacked_csr[:n_genes, :].tocsc()
+        unspliced = stacked_csr[n_genes:2 * n_genes, :].tocsc()
+        ambiguous = stacked_csr[2 * n_genes:3 * n_genes, :].tocsc()
 
     # Resolve whitelist.
     resolved: ResolvedWhitelist = resolve_whitelist(
@@ -197,8 +211,9 @@ def _read_one_velocyto_sample(
 
     if resolved.barcodes is not None:
         wl_set = resolved.barcodes
-        keep = np.fromiter((bc in wl_set for bc in barcodes), dtype=bool,
-                           count=len(barcodes))
+        # ``pd.Index(...).isin(set)`` is ~50× faster than a Python comprehension
+        # on 6.7M barcodes and dtype-safe across str / numpy.str_ / arrow.
+        keep = np.asarray(pd.Index(barcodes).isin(wl_set), dtype=bool)
         if not keep.any():
             warnings.warn(
                 f"Velocyto sample {sample_id!r}: whitelist intersection is "
@@ -221,9 +236,10 @@ def _read_one_velocyto_sample(
         spatial_aligned = resolved.spatial.reindex(barcodes)
         if spatial_aligned.isna().any().any():
             missing = int(spatial_aligned["in_tissue"].isna().sum())
-            raise RuntimeError(
-                f"Velocyto sample {sample_id!r}: {missing} kept barcodes have "
-                "no tissue_positions row — internal whitelist filtering bug."
+            raise ValueError(
+                f"Velocyto sample {sample_id!r}: {missing} kept barcodes are "
+                "not present in tissue_positions; verify the tissue_positions "
+                "file is from the same library as the MTX."
             )
 
     return _VelSampleArtifacts(
@@ -241,9 +257,13 @@ def _concat_velocyto_samples(
     var_names: Literal["gene_ids", "gene_symbols"],
 ) -> tuple[
     sp.csc_matrix, sp.csc_matrix, sp.csc_matrix,
-    pd.DataFrame, pd.DataFrame, dict | None,
+    pd.DataFrame, pd.DataFrame, dict | None, np.ndarray | None,
 ]:
-    """Union genes (zero-pad), stack cells. Mirrors the gene-reader concat."""
+    """Union genes (zero-pad), stack cells. Mirrors the gene-reader concat.
+
+    Returns the three layer matrices, ``var``, ``obs``, ``spatial_uns``,
+    and ``spatial_arr`` (explicit; not smuggled via ``obs.attrs``).
+    """
     seen: dict[str, dict] = {}
     for art in artifacts:
         for row in art.features.itertuples(index=False):
@@ -299,12 +319,15 @@ def _concat_velocyto_samples(
                     "metadata": {"source": "starsolo+tissue_positions"},
                 }
 
-    spliced = sp.vstack(s_blocks, format="csc").astype(np.float64) if s_blocks else \
-        sp.csc_matrix((0, n_global), dtype=np.float64)
-    unspliced = sp.vstack(u_blocks, format="csc").astype(np.float64) if u_blocks else \
-        sp.csc_matrix((0, n_global), dtype=np.float64)
-    ambiguous = sp.vstack(a_blocks, format="csc").astype(np.float64) if a_blocks else \
-        sp.csc_matrix((0, n_global), dtype=np.float64)
+    # vstack in CSR (cheap) then convert to CSC at the end; CSC isn't the
+    # natural concat format and vstacking it peaks at multi-GB on real data.
+    def _stack(blocks: list[sp.csc_matrix]) -> sp.csc_matrix:
+        if not blocks:
+            return sp.csc_matrix((0, n_global), dtype=np.float64)
+        return sp.vstack(blocks, format="csr").tocsc().astype(np.float64)
+    spliced = _stack(s_blocks)
+    unspliced = _stack(u_blocks)
+    ambiguous = _stack(a_blocks)
 
     obs = pd.concat(obs_rows, axis=0, ignore_index=True) if obs_rows else \
         pd.DataFrame({"barcode": [], "sample_id": []})
@@ -344,8 +367,12 @@ def _concat_velocyto_samples(
     else:
         spatial_arr = None
 
-    obs.attrs["_spatial_arr"] = spatial_arr
-    return spliced, unspliced, ambiguous, var, obs, (spatial_uns if spatial_uns else None)
+    return (
+        spliced, unspliced, ambiguous,
+        var, obs,
+        (spatial_uns if spatial_uns else None),
+        spatial_arr,
+    )
 
 
 def read_starsolo_velocyto(
@@ -365,7 +392,10 @@ def read_starsolo_velocyto(
     ----------
     sample_dirs, sample_ids, barcode_whitelists, use_internal_whitelist,
     var_names, tissue_positions, spatial_library_ids, verbose
-        Same shape as :func:`read_starsolo_gene`.
+        Same shape as :func:`read_starsolo_gene`. ``sample_ids`` **must
+        not contain ``'-'``**: the ``{barcode}-{sample_id}`` ``obs_names``
+        convention becomes unparseable if a sample_id has an embedded
+        hyphen.
 
     Returns
     -------
@@ -407,8 +437,15 @@ def read_starsolo_velocyto(
     if len(sample_dirs) == 0:
         raise ValueError("At least one sample_dir / sample_id pair is required.")
     if len(set(sample_ids)) != len(sample_ids):
-        dup = [s for s in sample_ids if sample_ids.count(s) > 1]
-        raise ValueError(f"sample_ids must be unique; duplicates: {sorted(set(dup))}")
+        dup = sorted({s for s, c in Counter(sample_ids).items() if c > 1})
+        raise ValueError(f"sample_ids must be unique; duplicates: {dup}")
+    bad_sid = [s for s in sample_ids if "-" in s]
+    if bad_sid:
+        raise ValueError(
+            f"sample_ids must not contain '-' (the reader uses 'obs_names = "
+            f"{{barcode}}-{{sample_id}}' so embedded hyphens make the suffix "
+            f"ambiguous to parse). Offending sample_ids: {bad_sid}"
+        )
 
     n = len(sample_dirs)
     bcw = normalize_per_sample_arg(barcode_whitelists, n, name="barcode_whitelists")
@@ -426,10 +463,11 @@ def read_starsolo_velocyto(
             )
         )
 
-    spliced, unspliced, ambiguous, var, obs, spatial_uns = _concat_velocyto_samples(
+    (
+        spliced, unspliced, ambiguous, var, obs, spatial_uns, spatial_arr
+    ) = _concat_velocyto_samples(
         artifacts, sample_ids, var_names=var_names,
     )
-    spatial_arr = obs.attrs.pop("_spatial_arr", None)
 
     adata = ad.AnnData(
         X=spliced.copy(),

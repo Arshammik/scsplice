@@ -23,6 +23,7 @@ modules apply those to MTX matrices.
 
 from __future__ import annotations
 
+import re
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -40,6 +41,9 @@ __all__ = [
     "normalize_per_sample_arg",
     "resolve_whitelist",
 ]
+
+
+_NT_RE = re.compile(r"^[ACGTN]+$", re.IGNORECASE)
 
 
 # Space Ranger 2.x column order with header. Space Ranger 1.x is the same
@@ -115,8 +119,21 @@ def load_barcode_whitelist(
             spec, sep="\t", header=None, dtype=str, compression="infer",
             usecols=[0], names=["barcode"],
         )
-        return set(df["barcode"].astype(str).tolist())
-    return set(map(str, spec))
+        out = set(df["barcode"].astype(str).tolist())
+    else:
+        out = set(map(str, spec))
+    # Sanity-check: at least ONE entry should look like a nucleotide sequence.
+    # If the user passed a CSV-formatted whitelist by mistake, the entire
+    # first line becomes one "barcode" containing commas — catch that here.
+    if out and not any(_NT_RE.match(b) for b in out):
+        warnings.warn(
+            "load_barcode_whitelist: none of the loaded entries look like a "
+            "nucleotide barcode (regex ^[ACGTN]+$). The input may be a CSV "
+            "or contain malformed lines; whitelist intersection will likely "
+            "be empty.",
+            stacklevel=3,
+        )
+    return out
 
 
 def load_tissue_positions(path: str | Path) -> pd.DataFrame:
@@ -138,15 +155,18 @@ def load_tissue_positions(path: str | Path) -> pd.DataFrame:
         "barcode" in first.lower()
         and ("in_tissue" in first.lower() or "in_tissue" in first)
     )
-    read_kwargs: dict = {"dtype": {0: str}}
     if has_header:
-        df = pd.read_csv(path, **read_kwargs)
+        # In the header branch, key dtype by column NAME ("barcode") instead
+        # of positional 0; the first column may not be at position 0 if the
+        # file has been re-ordered, and named keys are robust.
+        df = pd.read_csv(path, dtype={"barcode": str})
         # Allow trivial column-name variations.
         rename_map = {c: c.strip().lower() for c in df.columns}
         df = df.rename(columns=rename_map)
     else:
         df = pd.read_csv(
-            path, header=None, names=list(_TISSUE_POSITIONS_COLS), **read_kwargs,
+            path, header=None, names=list(_TISSUE_POSITIONS_COLS),
+            dtype={0: str},
         )
 
     needed = list(_TISSUE_POSITIONS_COLS)
@@ -158,6 +178,9 @@ def load_tissue_positions(path: str | Path) -> pd.DataFrame:
         )
 
     df = df.loc[:, needed].copy()
+    # Unconditional str cast: handles all-numeric barcodes (legitimate for
+    # some custom spatial assays) that would otherwise round-trip as int64
+    # and silently fail set-intersection with str MTX barcodes.
     df["barcode"] = df["barcode"].astype(str)
     df["in_tissue"] = df["in_tissue"].astype(np.int8)
     df["array_row"] = df["array_row"].astype(np.int32)

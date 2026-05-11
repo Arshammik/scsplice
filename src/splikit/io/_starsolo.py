@@ -23,7 +23,9 @@ The output AnnData has:
 
 from __future__ import annotations
 
+import os
 import warnings
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,6 +54,41 @@ __all__ = ["read_starsolo"]
 
 # STARsolo encodes strand as 0 (undefined) / 1 (+) / 2 (-).
 _STAR_STRAND_DECODE = {0: ".", 1: "+", 2: "-"}
+
+
+# Defensive caps on mmread inputs. A malformed matrix.mtx header that
+# declares ``nnz=1e12`` would OOM scipy before any shape check fires.
+# Both can be overridden via environment variable for users with truly
+# enormous (but well-formed) inputs.
+_MAX_MTX_NNZ: int = int(os.environ.get("SPLIKIT_MAX_MTX_NNZ", 5_000_000_000))
+_MAX_MTX_SHAPE: int = int(os.environ.get("SPLIKIT_MAX_MTX_SHAPE", 10_000_000_000_000))
+
+
+def _safe_mmread(path: Path | str, *, what: str = "matrix.mtx") -> sp.spmatrix:
+    """``scipy.io.mmread`` with a header-only pre-check.
+
+    Calls :func:`scipy.io.mminfo` first to read the ``(rows cols nnz)``
+    header without allocating; if the file's declared size exceeds
+    ``_MAX_MTX_NNZ`` or ``rows * cols > _MAX_MTX_SHAPE`` raises early with
+    a clear message instead of OOMing inside scipy.
+    """
+    path = Path(path)
+    info = sio.mminfo(str(path))
+    rows, cols, nnz = int(info[0]), int(info[1]), int(info[2])
+    if nnz > _MAX_MTX_NNZ:
+        raise ValueError(
+            f"{what} at {path} declares nnz={nnz:,} > _MAX_MTX_NNZ="
+            f"{_MAX_MTX_NNZ:,}. Refusing to allocate. If this is a "
+            "legitimate but very large MTX, raise the limit via the "
+            "SPLIKIT_MAX_MTX_NNZ environment variable."
+        )
+    if rows * cols > _MAX_MTX_SHAPE:
+        raise ValueError(
+            f"{what} at {path} declares shape {rows}x{cols} (product "
+            f"{rows * cols:,}) > _MAX_MTX_SHAPE={_MAX_MTX_SHAPE:,}. "
+            "Refusing to allocate. Raise SPLIKIT_MAX_MTX_SHAPE to override."
+        )
+    return sio.mmread(str(path))
 
 
 @dataclass(frozen=True)
@@ -133,7 +170,7 @@ def _read_one_sample(
         print(f"[splikit.io] Reading sample {sample_id!r} from {paths.matrix.parent}")
 
     # MTX is junctions × cells per STARsolo convention.
-    mtx = sio.mmread(str(paths.matrix)).tocsc().astype(np.float64)
+    mtx = _safe_mmread(paths.matrix, what="SJ matrix.mtx").tocsc().astype(np.float64)
     n_jx_mtx, n_cells_mtx = mtx.shape
 
     barcodes = pd.read_csv(
@@ -141,6 +178,8 @@ def _read_one_sample(
         dtype=str, compression="infer",
     )["barcode"].to_numpy()
 
+    # ``unique_mapped`` is a per-junction unique-read count; deeply sequenced
+    # libraries can plausibly exceed int8 / int32 — use int64 to be safe.
     sj_cols = ["chr", "start", "end", "strand",
                "intron_motif", "is_annot", "unique_mapped"]
     features = pd.read_csv(
@@ -148,18 +187,18 @@ def _read_one_sample(
         usecols=range(len(sj_cols)), names=sj_cols,
         dtype={"chr": str, "start": "int64", "end": "int64",
                "strand": "int8", "intron_motif": "int8",
-               "is_annot": "int8", "unique_mapped": "int32"},
+               "is_annot": "int8", "unique_mapped": "int64"},
         compression="infer",
     )
 
     if mtx.shape[0] != len(features) or mtx.shape[1] != len(barcodes):
         raise ValueError(
             f"STARsolo dimension mismatch in sample {sample_id!r}:\n"
-            f"  matrix.mtx declares {n_jx_mtx} junctions x {n_cells_mtx} cells\n"
-            f"  SJ.out.tab has    {len(features)} rows\n"
-            f"  barcodes.tsv has  {len(barcodes)} lines\n"
-            f"Junction or cell count disagrees. Verify SJ.out.tab and matrix.mtx "
-            f"came from the same STARsolo run."
+            f"  matrix.mtx header says    {n_jx_mtx} junctions x {n_cells_mtx} cells (source of truth)\n"
+            f"  SJ.out.tab parsed to     {len(features)} rows\n"
+            f"  barcodes.tsv parsed to   {len(barcodes)} lines\n"
+            "Verify SJ.out.tab is well-formed (no comment rows) and from the "
+            "same STARsolo run as matrix.mtx."
         )
 
     # Decode strand 0/1/2 → '.' / '+' / '-'.
@@ -199,7 +238,9 @@ def _read_one_sample(
     )
     wl_set = resolved.barcodes
     if wl_set is not None:
-        keep_cells = np.array([bc in wl_set for bc in barcodes], dtype=bool)
+        # ``pd.Index(...).isin(set)`` is ~50× faster than a Python list-comp
+        # on 6.7M barcodes and dtype-safe across str / numpy.str_ / arrow.
+        keep_cells = np.asarray(pd.Index(barcodes).isin(wl_set), dtype=bool)
         if not keep_cells.any():
             warnings.warn(
                 f"Sample {sample_id!r}: whitelist intersection is empty; "
@@ -214,9 +255,10 @@ def _read_one_sample(
         spatial_aligned = resolved.spatial.reindex(barcodes)
         if spatial_aligned.isna().any().any():
             n_missing = int(spatial_aligned["in_tissue"].isna().sum())
-            raise RuntimeError(
-                f"SJ sample {sample_id!r}: {n_missing} kept barcodes have no "
-                "tissue_positions row — internal whitelist filtering bug."
+            raise ValueError(
+                f"SJ sample {sample_id!r}: {n_missing} kept barcodes are not "
+                "present in tissue_positions; verify the tissue_positions file "
+                "is from the same library as the MTX."
             )
 
     return _SampleArtifacts(
@@ -229,7 +271,16 @@ def _read_one_sample(
 def _global_junction_table(
     artifacts: list[_SampleArtifacts],
 ) -> pd.DataFrame:
-    """Build the global, deduplicated junction table across all samples."""
+    """Build the global, deduplicated junction table across all samples.
+
+    Per-junction QC flags (``is_annot``, ``unique_mapped``) are aggregated
+    with ``max`` across samples so the strongest signal wins (a junction
+    annotated in at least one sample is treated as annotated globally;
+    its global ``unique_mapped`` count is the max observed across samples).
+    Other columns take the first observed value (``chr``, ``start``,
+    ``end``, ``strand`` are identity keys, ``intron_motif`` is constant
+    per-junction in well-formed SJ.out.tab).
+    """
     non_empty = [a.features for a in artifacts if len(a.features) > 0]
     if not non_empty:
         raise ValueError(
@@ -238,11 +289,44 @@ def _global_junction_table(
             "SJ.out.tab is well-formed."
         )
     pooled = pd.concat(non_empty, axis=0, ignore_index=True)
-    # Stable order: (chr, start, end, strand) lexicographic.
-    pooled = pooled.drop_duplicates(
-        subset=["chr", "start", "end", "strand"], keep="first"
-    ).reset_index(drop=True)
-    return pooled
+
+    keys = ["chr", "start", "end", "strand"]
+    # Cast categoricals back to plain types so groupby preserves them
+    # without observed-cardinality warnings, then aggregate.
+    pooled_for_agg = pooled.copy()
+    if isinstance(pooled_for_agg["chr"].dtype, pd.CategoricalDtype):
+        pooled_for_agg["chr"] = pooled_for_agg["chr"].astype(str)
+    if isinstance(pooled_for_agg["strand"].dtype, pd.CategoricalDtype):
+        pooled_for_agg["strand"] = pooled_for_agg["strand"].astype(str)
+
+    agg_map: dict[str, str] = {}
+    for col in pooled_for_agg.columns:
+        if col in keys:
+            continue
+        if col in ("is_annot", "unique_mapped"):
+            agg_map[col] = "max"
+        else:
+            agg_map[col] = "first"
+
+    grouped = (
+        pooled_for_agg.groupby(keys, as_index=False, sort=False, observed=True)
+        .agg(agg_map)
+        .reset_index(drop=True)
+    )
+    # Restore categorical dtypes that callers downstream rely on.
+    grouped["chr"] = grouped["chr"].astype("category")
+    grouped["strand"] = grouped["strand"].astype(
+        pd.CategoricalDtype(categories=[".", "+", "-"])
+    )
+    # Reorder columns to match the original layout for downstream stability.
+    grouped = grouped.loc[:, list(pooled.columns)]
+    # Validate uniqueness on the natural key post-aggregation.
+    if grouped.duplicated(subset=keys).any():
+        raise RuntimeError(
+            "Internal error: junction table not unique on (chr, start, end, "
+            "strand) after aggregation — please file a bug with input details."
+        )
+    return grouped
 
 
 def _concat_samples(
@@ -453,6 +537,11 @@ def _filter_min_counts(
     documented for ``var["group_id"]`` (and required by the C++ kernel) holds
     on the returned AnnData. Dropping events can leave gaps in the group_id
     range when an entire LJV group's members all fail the filter.
+
+    Also drops any LJV group that has fallen to size 1 after filtering — the
+    LJV semantics require ``group_count >= 2``. We iterate to a fixed point
+    because removing a singleton leaves no surviving members of its group, but
+    in principle never cascades (we don't add events back).
     """
     if min_counts <= 0:
         return mtx_grouped, var_grouped
@@ -463,15 +552,56 @@ def _filter_min_counts(
             f"min_counts={min_counts} removed all {len(var_grouped)} events; "
             f"row-sum range was [{row_sums.min():.1f}, {row_sums.max():.1f}]."
         )
-    out_var = var_grouped.loc[keep].copy()
-    # Re-densify group_id so codes are 0..G_kept-1 with no gaps.
-    new_codes, _ = pd.factorize(out_var["group_id"].to_numpy(), use_na_sentinel=False)
-    out_var["group_id"] = new_codes.astype(np.int32)
-    # group_count is no longer accurate after dropping members; rebuild.
-    out_var["group_count"] = out_var.groupby("group_id")["group_id"].transform(
-        "size"
-    ).astype(np.int32)
-    return mtx_grouped[keep, :].tocsc(), out_var
+    out_var = var_grouped.loc[keep].copy().reset_index(drop=False)
+    # Preserve the original var_names index column for the final rebuild.
+    if "index" in out_var.columns:
+        out_var = out_var.rename(columns={"index": "_orig_index"})
+    out_mtx = mtx_grouped[keep, :].tocsc()
+
+    # Iterate: factorize → compute group_count → drop singletons → repeat
+    # until no singletons remain. This is bounded; each pass shrinks the set.
+    n_singleton_total = 0
+    while True:
+        new_codes, _ = pd.factorize(out_var["group_id"].to_numpy(), use_na_sentinel=False)
+        out_var["group_id"] = new_codes.astype(np.int32)
+        sizes = (
+            out_var.groupby("group_id")["group_id"].transform("size").astype(np.int32)
+        )
+        out_var["group_count"] = sizes.to_numpy()
+        survivors = (sizes >= 2).to_numpy()
+        if survivors.all():
+            break
+        n_singleton_total += int((~survivors).sum())
+        out_var = out_var.loc[survivors].reset_index(drop=True)
+        out_mtx = out_mtx[survivors, :].tocsc()
+        if len(out_var) == 0:
+            # Emit the warning BEFORE raising so callers using pytest.warns
+            # or warnings.catch_warnings can observe both signals.
+            warnings.warn(
+                f"min_counts={min_counts} dropped {n_singleton_total} event "
+                "row(s) whose LJV group fell to size 1 after filtering "
+                "(group_count must be >= 2).",
+                stacklevel=3,
+            )
+            raise ValueError(
+                f"min_counts={min_counts} left no LJV-valid events (every "
+                "surviving event's group_count fell to 1). Lower min_counts "
+                "or check the input."
+            )
+
+    if n_singleton_total:
+        warnings.warn(
+            f"min_counts={min_counts} dropped {n_singleton_total} event row(s) "
+            "whose LJV group fell to size 1 after filtering (group_count must "
+            "be >= 2).",
+            stacklevel=3,
+        )
+
+    # Restore the original event-name index.
+    if "_orig_index" in out_var.columns:
+        out_var.index = pd.Index(out_var["_orig_index"].to_numpy())
+        out_var = out_var.drop(columns=["_orig_index"])
+    return out_mtx, out_var
 
 
 def read_starsolo(
@@ -499,6 +629,9 @@ def read_starsolo(
         Per-directory unique sample identifier; appears in
         ``adata.obs["sample_id"]`` and as the ``-{sample_id}`` suffix on
         ``adata.obs_names``. Must have the same length as ``sj_dirs``.
+        **Must not contain ``'-'``**: the ``{barcode}-{sample_id}``
+        ``obs_names`` convention becomes unparseable if the sample_id has
+        an embedded hyphen, so the reader rejects such inputs up-front.
     barcode_whitelists
         Optional per-sample whitelist of raw 16-mer barcodes. Each entry
         may be a path to a one-barcode-per-line file, a sequence of
@@ -569,8 +702,15 @@ def read_starsolo(
     if len(sj_dirs) == 0:
         raise ValueError("At least one sj_dir / sample_id pair is required.")
     if len(set(sample_ids)) != len(sample_ids):
-        dup = [s for s in sample_ids if sample_ids.count(s) > 1]
-        raise ValueError(f"sample_ids must be unique; duplicates: {sorted(set(dup))}")
+        dup = sorted({s for s, c in Counter(sample_ids).items() if c > 1})
+        raise ValueError(f"sample_ids must be unique; duplicates: {dup}")
+    bad_sid = [s for s in sample_ids if "-" in s]
+    if bad_sid:
+        raise ValueError(
+            f"sample_ids must not contain '-' (the reader uses 'obs_names = "
+            f"{{barcode}}-{{sample_id}}' so embedded hyphens make the suffix "
+            f"ambiguous to parse). Offending sample_ids: {bad_sid}"
+        )
     if min_counts < 0:
         raise ValueError(f"min_counts must be non-negative, got {min_counts}")
     if ljv_kind not in ("start_end", "start", "end"):
