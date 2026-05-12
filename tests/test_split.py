@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from splikit._core._split import split_paired_by_sample
+from scsplice._core._split import split_paired_by_sample
 
 
 def _make_adata(samples: list[str], n_var: int = 3) -> ad.AnnData:

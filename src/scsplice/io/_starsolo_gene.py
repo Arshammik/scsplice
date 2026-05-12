@@ -513,7 +513,10 @@ def read_starsolo_gene(
     )
 
     adata = ad.AnnData(X=X, obs=obs, var=var)
-    adata.uns["splikit"] = {
+    # Use the canonical scsplice namespace key. Legacy h5ad files written by
+    # splikit-py 1.0.0 carry uns['splikit']; validators downstream transparently
+    # migrate that via scsplice._core._validators.get_scsplice_ns.
+    adata.uns["scsplice"] = {
         "version": 1,
         "source": "starsolo",
         "params": {

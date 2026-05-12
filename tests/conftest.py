@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for splikit-py tests."""
+"""Shared pytest fixtures for scsplice tests."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def synthetic_splicing_adata():
             index=[f"bc{i}-s1" for i in range(n_cells)],
         )
         a = ad.AnnData(layers={"M1": M1}, obs=obs, var=var)
-        a.uns["splikit"] = {"m2_valid": False}
+        a.uns["scsplice"] = {"m2_valid": False}
         return a
 
     return _make

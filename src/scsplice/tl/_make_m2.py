@@ -11,6 +11,7 @@ import scipy.sparse as sp
 
 from scsplice._core._validators import (
     mark_m2_valid,
+    setdefault_scsplice_ns,
     validate_m1_layer,
     validate_var_schema,
 )
@@ -95,8 +96,8 @@ def make_m2(
 
     Notes
     -----
-    Sets ``adata.uns['splikit']['m2_valid'] = True`` and records the call params
-    under ``adata.uns['splikit']['params']['make_m2']``.
+    Sets ``adata.uns['scsplice']['m2_valid'] = True`` and records the call params
+    under ``adata.uns['scsplice']['params']['make_m2']``.
 
     The kernel reads ``layers['M1']``, transposes to events × cells at the C++
     boundary (the kernel works in that layout), and transposes the result back
@@ -134,7 +135,7 @@ def make_m2(
     adata.layers["M2"] = M2
 
     mark_m2_valid(adata)
-    ns = adata.uns.setdefault("splikit", {})
+    ns = setdefault_scsplice_ns(adata)
     ns.setdefault("params", {})["make_m2"] = {"n_threads": int(n_threads)}
 
     return adata if copy else None

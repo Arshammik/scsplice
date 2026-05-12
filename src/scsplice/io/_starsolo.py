@@ -17,7 +17,7 @@ The output AnnData has:
   ``group_count`` (int32, ≥ 2 by construction).
 - ``obs`` columns: ``barcode`` (raw 16-mer), ``sample_id`` (user-supplied).
 - ``obs_names``: ``f"{barcode}-{sample_id}"``.
-- ``uns["splikit"]``: ``version`` (currently 1), ``m2_valid`` (False),
+- ``uns["scsplice"]``: ``version`` (currently 1), ``m2_valid`` (False),
   ``ljv_kind``, ``source`` ("starsolo"), ``params``.
 """
 
@@ -686,7 +686,7 @@ def read_starsolo(
     -------
     AnnData
         Cells × events. ``layers["M1"]`` populated; ``layers["M2"]`` absent
-        and ``uns["splikit"]["m2_valid"] is False`` — call
+        and ``uns["scsplice"]["m2_valid"] is False`` — call
         :func:`scsplice.tl.make_m2` next.
     """
     if isinstance(sj_dirs, (str, Path)):
@@ -753,7 +753,10 @@ def read_starsolo(
         obs=obs,
         var=var_grouped,
     )
-    adata.uns["splikit"] = {
+    # Use the canonical scsplice namespace key. Legacy h5ad files written by
+    # splikit-py 1.0.0 carry uns['splikit']; readers / validators downstream
+    # transparently migrate that via scsplice._core._validators.get_scsplice_ns.
+    adata.uns["scsplice"] = {
         "version": 1,
         "m2_valid": False,
         "ljv_kind": ljv_kind,

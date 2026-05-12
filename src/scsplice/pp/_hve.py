@@ -7,6 +7,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from scsplice._core._validators import (
+    setdefault_scsplice_ns,
     validate_paired_layers,
     validate_var_schema,
 )
@@ -48,7 +49,7 @@ def highly_variable_events(
     ----------
     adata
         Splicing AnnData with ``layers['M1']``, ``layers['M2']``, and
-        ``obs[sample_key]``. M2 must be valid (``uns['splikit']['m2_valid']``).
+        ``obs[sample_key]``. M2 must be valid (``uns['scsplice']['m2_valid']``).
     min_row_sum
         Minimum row sum required on **both** M1 and M2 (computed on the
         full data, before per-library splitting). Events failing the filter
@@ -76,7 +77,7 @@ def highly_variable_events(
     -----
     Writes ``var['sum_deviance']`` (float64, ``NaN`` for filtered-out events)
     and ``var[key_added]`` (bool). Stores call params under
-    ``uns['splikit']['params']['highly_variable_events']``.
+    ``uns['scsplice']['params']['highly_variable_events']``.
     """
     cpp = _import_extension()
 
@@ -161,7 +162,7 @@ def highly_variable_events(
     adata.var["sum_deviance"] = sum_deviance
     adata.var[key_added] = selected
 
-    ns = adata.uns.setdefault("splikit", {})
+    ns = setdefault_scsplice_ns(adata)
     ns.setdefault("params", {})["highly_variable_events"] = {
         "min_row_sum": float(min_row_sum),
         "n_top": None if n_top is None else int(n_top),
