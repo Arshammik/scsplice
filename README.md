@@ -1,5 +1,14 @@
 # scsplice
 
+[![PyPI](https://img.shields.io/pypi/v/scsplice.svg?logo=pypi&logoColor=white)](https://pypi.org/project/scsplice/)
+[![Python versions](https://img.shields.io/pypi/pyversions/scsplice.svg?logo=python&logoColor=white)](https://pypi.org/project/scsplice/)
+[![License: MIT](https://img.shields.io/pypi/l/scsplice.svg)](https://github.com/Arshammik/scsplice/blob/main/LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/test.yml?branch=main&label=tests&logo=github)](https://github.com/Arshammik/scsplice/actions/workflows/test.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/docs.yml?branch=main&label=docs&logo=materialformkdocs&logoColor=white)](https://arshammik.github.io/scsplice/)
+[![Downloads](https://img.shields.io/pypi/dm/scsplice.svg)](https://pypi.org/project/scsplice/)
+[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![scverse ecosystem](https://img.shields.io/badge/ecosystem-scverse-1f2c4c)](https://scverse.org)
+
 Single-cell alternative-splicing analysis for the [scverse](https://scverse.org) ecosystem.
 
 `scsplice` is the Python port of the R package [splikit](https://github.com/csglab/splikit). It analyses splice-junction count data in single-cell RNA-seq, treating each event as a pair of inclusion (`M1`) and exclusion (`M2`) counts derived from local junction variants (LJVs). The package is AnnData-native — junctions live on the `var` axis, M1 and M2 sit in `layers`, and downstream analysis composes naturally with `scanpy`.
@@ -21,7 +30,7 @@ HVG, plotting, and silhouette utilities from the R package are intentionally omi
 Eigen3 (header-only) is required at install time; OpenMP is optional but
 strongly recommended for multi-threaded kernels.
 
-### From PyPI (once v2.0 is published)
+### From PyPI
 
 ```bash
 pip install scsplice
