@@ -1,4 +1,4 @@
-"""Tests for splikit.io.read_starsolo.
+"""Tests for scsplice.io.read_starsolo.
 
 Synthetic STARsolo directories are built per-test with `_make_starsolo_dir`.
 The fixtures cover the LJV-grouping edge cases that are easy to get wrong:
@@ -58,7 +58,7 @@ def _make_starsolo_dir(
 
 
 def test_read_starsolo_single_sample_smoke(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         # Two junctions sharing (chr, start) → start group of size 2 (both _S).
@@ -81,7 +81,7 @@ def test_read_starsolo_single_sample_smoke(tmp_path):
     )
     sj_dir = _make_starsolo_dir(tmp_path / "s1", junctions, barcodes, counts)
 
-    a = splikit.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
+    a = scsplice.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
     assert a.n_obs == 4
     # 2 _S rows + 2 _E rows; the chr2 singleton is dropped.
     assert a.n_vars == 4
@@ -101,9 +101,9 @@ def test_read_starsolo_single_sample_smoke(tmp_path):
     assert M1.dtype == np.float64
     assert sp.issparse(M1) and M1.format == "csc"
     # uns provenance.
-    assert a.uns["splikit"]["m2_valid"] is False
-    assert a.uns["splikit"]["source"] == "starsolo"
-    assert a.uns["splikit"]["ljv_kind"] == "start_end"
+    assert a.uns["scsplice"]["m2_valid"] is False
+    assert a.uns["scsplice"]["source"] == "starsolo"
+    assert a.uns["scsplice"]["ljv_kind"] == "start_end"
     # obs schema.
     assert "sample_id" in a.obs.columns
     assert "barcode" in a.obs.columns
@@ -112,7 +112,7 @@ def test_read_starsolo_single_sample_smoke(tmp_path):
 
 def test_read_starsolo_dual_qualifying_junction(tmp_path):
     """A junction in BOTH a start-group and an end-group must produce TWO event rows."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         # Junction A and B share start=100 (start-group of 2)
@@ -125,7 +125,7 @@ def test_read_starsolo_dual_qualifying_junction(tmp_path):
     counts = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.int64)
     sj_dir = _make_starsolo_dir(tmp_path / "s1", junctions, barcodes, counts)
 
-    a = splikit.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
+    a = scsplice.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
     # A is in both S-group (with B) and E-group (with C) → A appears twice (_S and _E).
     # B is in S-group only → one _S row.
     # C is in E-group only → one _E row.
@@ -145,7 +145,7 @@ def test_read_starsolo_two_samples_cross_sample_ljv(tmp_path):
     group AFTER global concat. The reader must compute groups globally, not
     per-sample.
     """
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     # Sample 1 has junction X = (chr1, 100, 200) — locally singleton.
     s1 = _make_starsolo_dir(
@@ -163,7 +163,7 @@ def test_read_starsolo_two_samples_cross_sample_ljv(tmp_path):
         np.array([[7, 8]], dtype=np.int64),
     )
 
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         [s1, s2], ["s1", "s2"], use_internal_whitelist=False
     )
     # X and Y form one S-group of size 2.
@@ -190,7 +190,7 @@ def test_read_starsolo_two_samples_cross_sample_ljv(tmp_path):
 
 
 def test_read_starsolo_disjoint_junctions_zero_padded(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     s1 = _make_starsolo_dir(
         tmp_path / "s1",
@@ -206,7 +206,7 @@ def test_read_starsolo_disjoint_junctions_zero_padded(tmp_path):
         ["BC_B"],
         np.array([[3], [4]], dtype=np.int64),
     )
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         [s1, s2], ["s1", "s2"], use_internal_whitelist=False
     )
     # 2 _S events from s1 (chr1) + 2 _S events from s2 (chr2) = 4 total events.
@@ -223,7 +223,7 @@ def test_read_starsolo_disjoint_junctions_zero_padded(tmp_path):
 
 
 def test_read_starsolo_keep_multi_mapped_filter(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         ("chr1", 100, 200, 1, 1, 1, 5),  # unique-mapped > 0
@@ -234,13 +234,13 @@ def test_read_starsolo_keep_multi_mapped_filter(tmp_path):
     counts = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.int64)
     sj_dir = _make_starsolo_dir(tmp_path / "s1", junctions, barcodes, counts)
 
-    a_default = splikit.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
+    a_default = scsplice.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
     # Default keep_multi_mapped=False filters out the second junction; the
     # remaining two share start=100 and form one S-group of size 2.
     assert a_default.n_vars == 2
     assert (a_default.var["group_kind"].astype(str) == "S").sum() == 2
 
-    a_kept = splikit.io.read_starsolo(
+    a_kept = scsplice.io.read_starsolo(
         sj_dir, "s1", keep_multi_mapped=True, use_internal_whitelist=False
     )
     # All three junctions share start → S-group of size 3, three _S events.
@@ -254,7 +254,7 @@ def test_read_starsolo_min_counts_filters(tmp_path):
     singleton is also removed (LJV semantics require >= 2 members per group)
     and a warning is emitted.
     """
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         # Three junctions sharing start=100: an S-group of size 3.
@@ -271,7 +271,7 @@ def test_read_starsolo_min_counts_filters(tmp_path):
     )
     sj_dir = _make_starsolo_dir(tmp_path / "s1", junctions, barcodes, counts)
 
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         sj_dir, "s1", min_counts=1, use_internal_whitelist=False
     )
     # The all-zero junction is dropped (row-sum 0 < 1). The remaining two
@@ -289,13 +289,13 @@ def test_read_starsolo_min_counts_filters(tmp_path):
     sj_dir2 = _make_starsolo_dir(tmp_path / "s2", junctions2, barcodes, counts2)
     with pytest.warns(UserWarning, match="LJV group fell to size 1"):
         with pytest.raises(ValueError, match="no LJV-valid events"):
-            splikit.io.read_starsolo(
+            scsplice.io.read_starsolo(
                 sj_dir2, "s1", min_counts=1, use_internal_whitelist=False,
             )
 
 
 def test_read_starsolo_dimension_mismatch_raises(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     sj_dir = _make_starsolo_dir(
         tmp_path / "s1",
@@ -308,11 +308,11 @@ def test_read_starsolo_dimension_mismatch_raises(tmp_path):
     bc_path = sj_dir / "raw" / "barcodes.tsv"
     bc_path.write_text("BC1\n")
     with pytest.raises(ValueError, match="dimension mismatch"):
-        splikit.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
+        scsplice.io.read_starsolo(sj_dir, "s1", use_internal_whitelist=False)
 
 
 def test_read_starsolo_explicit_whitelist(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         ("chr1", 100, 200, 1, 1, 1, 5),
@@ -323,7 +323,7 @@ def test_read_starsolo_explicit_whitelist(tmp_path):
         ["KEEP_A", "DROP_B", "KEEP_C"],
         np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64),
     )
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         sj_dir, "s1",
         barcode_whitelists=[["KEEP_A", "KEEP_C"]],
         use_internal_whitelist=False,
@@ -333,7 +333,7 @@ def test_read_starsolo_explicit_whitelist(tmp_path):
 
 
 def test_read_starsolo_argument_validation(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     sj_dir = _make_starsolo_dir(
         tmp_path / "s1",
@@ -343,21 +343,21 @@ def test_read_starsolo_argument_validation(tmp_path):
     )
 
     with pytest.raises(ValueError, match="must be unique"):
-        splikit.io.read_starsolo([sj_dir, sj_dir], ["s1", "s1"],
+        scsplice.io.read_starsolo([sj_dir, sj_dir], ["s1", "s1"],
                                   use_internal_whitelist=False)
     with pytest.raises(ValueError, match="must equal"):
-        splikit.io.read_starsolo([sj_dir], ["s1", "s2"],
+        scsplice.io.read_starsolo([sj_dir], ["s1", "s2"],
                                   use_internal_whitelist=False)
     with pytest.raises(ValueError, match="ljv_kind"):
-        splikit.io.read_starsolo(sj_dir, "s1", ljv_kind="bogus",
+        scsplice.io.read_starsolo(sj_dir, "s1", ljv_kind="bogus",
                                   use_internal_whitelist=False)
     with pytest.raises(ValueError, match="non-negative"):
-        splikit.io.read_starsolo(sj_dir, "s1", min_counts=-1,
+        scsplice.io.read_starsolo(sj_dir, "s1", min_counts=-1,
                                   use_internal_whitelist=False)
 
 
 def test_read_starsolo_ljv_kind_modes(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         ("chr1", 100, 200, 1, 1, 1, 5),
@@ -369,13 +369,13 @@ def test_read_starsolo_ljv_kind_modes(tmp_path):
         tmp_path / "s1", junctions, ["BC1", "BC2"],
         np.array([[1, 2], [3, 4], [5, 6], [7, 8]], dtype=np.int64),
     )
-    a_both = splikit.io.read_starsolo(
+    a_both = scsplice.io.read_starsolo(
         sj_dir, "s1", ljv_kind="start_end", use_internal_whitelist=False
     )
-    a_s = splikit.io.read_starsolo(
+    a_s = scsplice.io.read_starsolo(
         sj_dir, "s1", ljv_kind="start", use_internal_whitelist=False
     )
-    a_e = splikit.io.read_starsolo(
+    a_e = scsplice.io.read_starsolo(
         sj_dir, "s1", ljv_kind="end", use_internal_whitelist=False
     )
     assert a_both.n_vars == 4
@@ -385,7 +385,7 @@ def test_read_starsolo_ljv_kind_modes(tmp_path):
 
 def test_read_starsolo_tissue_positions_squidpy_fields(tmp_path):
     """The SJ reader inherits the same tissue_positions / spatial_library_ids API."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     junctions = [
         ("chr1", 100, 200, 1, 1, 1, 5),
@@ -402,7 +402,7 @@ def test_read_starsolo_tissue_positions_squidpy_fields(tmp_path):
         "BC1,1,0,0,10.0,20.0\n"
         "BC3,1,2,2,30.0,40.0\n"
     )
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         sj_dir, "s1",
         tissue_positions=[tp],
         spatial_library_ids=["lib_sj"],
@@ -423,10 +423,10 @@ def test_read_starsolo_real_refactor_parity(real_data_samples, real_data_sample_
     splicing AnnData schema matches the validators, both samples are present,
     and obs_names / var_names are well-formed.
     """
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     sj_dirs = [s / "Solo.out" / "SJ" for s in real_data_samples]
-    a = splikit.io.read_starsolo(
+    a = scsplice.io.read_starsolo(
         sj_dirs, real_data_sample_ids,
         # Same as the pre-refactor default: no spatial / no explicit WL.
         use_internal_whitelist=True, keep_multi_mapped=False,
@@ -446,7 +446,7 @@ def test_read_starsolo_real_refactor_parity(real_data_samples, real_data_sample_
 
 def test_read_starsolo_end_to_end_pipeline(tmp_path):
     """Full v1.0 pipeline: read_starsolo → make_m2 → highly_variable_events."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     rng = np.random.default_rng(0)
     n_jx = 10
@@ -469,15 +469,15 @@ def test_read_starsolo_end_to_end_pipeline(tmp_path):
 
     sj_dirs = [s[0] for s in samples]
     sample_ids = [s[1] for s in samples]
-    a = splikit.io.read_starsolo(sj_dirs, sample_ids, use_internal_whitelist=False)
+    a = scsplice.io.read_starsolo(sj_dirs, sample_ids, use_internal_whitelist=False)
     assert a.n_obs == 2 * n_cells_per_sample
     assert a.n_vars > 0
 
-    splikit.tl.make_m2(a, n_threads=1)
+    scsplice.tl.make_m2(a, n_threads=1)
     assert "M2" in a.layers
-    assert a.uns["splikit"]["m2_valid"] is True
+    assert a.uns["scsplice"]["m2_valid"] is True
 
-    splikit.pp.highly_variable_events(a, min_row_sum=1, n_threads=1)
+    scsplice.pp.highly_variable_events(a, min_row_sum=1, n_threads=1)
     assert "sum_deviance" in a.var.columns
     finite = np.isfinite(a.var["sum_deviance"]).sum()
     assert finite > 0

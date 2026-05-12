@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from splikit._core._validators import (
+from scsplice._core._validators import (
     invalidate_m2,
     mark_m2_valid,
     validate_m1_layer,
@@ -44,7 +44,7 @@ def _make_adata(n_obs: int = 10, n_var: int = 4, *, with_m2: bool = True,
         layers["M2"] = M1.copy()
     a = ad.AnnData(layers=layers, obs=obs, var=var)
     if with_m2:
-        a.uns["splikit"] = {"m2_valid": True}
+        a.uns["scsplice"] = {"m2_valid": True}
     return a
 
 
@@ -124,6 +124,6 @@ def test_validate_var_schema_bad_group_kind():
 def test_mark_invalidate_roundtrip():
     a = _make_adata()
     invalidate_m2(a)
-    assert a.uns["splikit"]["m2_valid"] is False
+    assert a.uns["scsplice"]["m2_valid"] is False
     mark_m2_valid(a)
-    assert a.uns["splikit"]["m2_valid"] is True
+    assert a.uns["scsplice"]["m2_valid"] is True

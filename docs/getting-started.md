@@ -24,14 +24,14 @@ conda install -c conda-forge eigen
 Once published to PyPI:
 
 ```bash
-pip install splikit-py
+pip install scsplice
 ```
 
 For development (editable install from source):
 
 ```bash
-git clone https://github.com/Arshammik/splikitpy
-cd splikitpy
+git clone https://github.com/Arshammik/scsplice
+cd scsplice
 pip install -e ".[test,docs]"
 ```
 
@@ -40,10 +40,10 @@ The `scikit-build-core` backend calls CMake to compile the Eigen-based C++ exten
 ## Verify the install
 
 ```python
-import splikit as splk
+import scsplice as scs
 
-print(splk.__version__)
-print(splk._splikit_cpp.__openmp__)  # True if built with OpenMP
+print(scs.__version__)
+print(scs._scsplice_cpp.__openmp__)  # True if built with OpenMP
 ```
 
 ---
@@ -92,9 +92,9 @@ sj_df.to_csv(tmp / "Solo.out" / "SJ.out.tab", sep="\t", header=False, index=Fals
 ### 2. Read with `read_starsolo`
 
 ```python
-import splikit as splk
+import scsplice as scs
 
-adata = splk.io.read_starsolo(
+adata = scs.io.read_starsolo(
     sj_dirs=[tmp / "Solo.out" / "SJ"],
     sample_ids=["demo"],
     verbose=True,
@@ -105,7 +105,7 @@ print(adata)
 # obs: 'barcode', 'sample_id'
 # var: 'chr', 'start', 'end', 'strand', 'intron_motif', 'is_annot',
 #      'unique_mapped', 'row_names_mtx', 'group_id', 'group_kind', 'group_count'
-# uns: 'splikit'
+# uns: 'scsplice'
 ```
 
 `adata.var_names` look like `chr1:100-200_S`, `chr1:100-300_S`, etc. — globally unique by construction. Never call `var_names_make_unique` on this object.
@@ -113,10 +113,10 @@ print(adata)
 ### 3. Build M2 with `make_m2`
 
 ```python
-splk.tl.make_m2(adata, n_threads=1)
+scs.tl.make_m2(adata, n_threads=1)
 
 print("M2 stored:", "M2" in adata.layers)  # True
-print("m2_valid:", adata.uns["splikit"]["m2_valid"])  # True
+print("m2_valid:", adata.uns["scsplice"]["m2_valid"])  # True
 ```
 
 M2 has the same shape, sparsity format (CSC), and dtype (float64) as M1. For every event `i` and cell `j`:
@@ -128,7 +128,7 @@ M2[j, i] = sum(M1[j, k] for k in same LJV group as i) - M1[j, i]
 ### 4. Select highly variable events
 
 ```python
-splk.pp.highly_variable_events(adata, min_row_sum=1, n_threads=1)
+scs.pp.highly_variable_events(adata, min_row_sum=1, n_threads=1)
 
 hve = adata.var["highly_variable"]
 print(f"{hve.sum()} events selected out of {len(hve)}")
@@ -163,7 +163,7 @@ If you need gene counts or RNA velocity in the same pipeline, two additional rea
 
 ```python
 # Gene-expression AnnData (counts in X, drop-in for scanpy)
-gex = splk.io.read_starsolo_gene(
+gex = scs.io.read_starsolo_gene(
     sample_dirs=["sample1", "sample2"],
     sample_ids=["s1", "s2"],
     var_names="gene_ids",       # default; Ensembl IDs as var_names
@@ -172,7 +172,7 @@ gex = splk.io.read_starsolo_gene(
 # Ready for: sc.pp.normalize_total(gex), sc.pp.highly_variable_genes(gex)
 
 # Velocyto AnnData (spliced / unspliced / ambiguous in layers, drop-in for scvelo)
-vel = splk.io.read_starsolo_velocyto(
+vel = scs.io.read_starsolo_velocyto(
     sample_dirs=["sample1", "sample2"],
     sample_ids=["s1", "s2"],
 )
@@ -191,7 +191,7 @@ adata, gex, vel = adata[common].copy(), gex[common].copy(), vel[common].copy()
 Pass a `tissue_positions.csv` from Space Ranger to any reader to populate squidpy-compatible spatial metadata:
 
 ```python
-vis = splk.io.read_starsolo_gene(
+vis = scs.io.read_starsolo_gene(
     sample_dirs=["visium_sample"],
     sample_ids=["vis1"],
     tissue_positions=["visium_sample/outs/tissue_positions.csv"],

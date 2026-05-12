@@ -1,4 +1,4 @@
-"""Tests for splikit.io.read_starsolo_gene.
+"""Tests for scsplice.io.read_starsolo_gene.
 
 Synthetic tests cover:
   - shape / dtype / CSC / obs_names / sample_id / uns
@@ -87,7 +87,7 @@ def _make_starsolo_gene_dir(
 # -----------------------------
 
 def test_read_starsolo_gene_single_sample_smoke(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     gene_ids = [f"ENSG{i:08d}" for i in range(5)]
     gene_names = [f"GENE{i}" for i in range(5)]
@@ -100,7 +100,7 @@ def test_read_starsolo_gene_single_sample_smoke(tmp_path):
         filtered_subset=barcodes,  # filtered = raw, simplifies expected counts
     )
 
-    a = splikit.io.read_starsolo_gene(tmp_path / "s1", "s1")
+    a = scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
     # filtered/ is the source by default → 8 cells, 5 genes.
     assert a.n_obs == 8
     assert a.n_vars == 5
@@ -116,8 +116,8 @@ def test_read_starsolo_gene_single_sample_smoke(tmp_path):
     assert "gene_name" in a.var.columns
     assert list(a.var_names) == gene_ids
     # uns scaffold.
-    assert a.uns["splikit"]["source"] == "starsolo"
-    assert "read_starsolo_gene" in a.uns["splikit"]["params"]
+    assert a.uns["scsplice"]["source"] == "starsolo"
+    assert "read_starsolo_gene" in a.uns["scsplice"]["params"]
     # X values match counts (cells×genes after transpose).
     dense = np.asarray(a.X.todense())
     assert np.array_equal(dense, counts.T)
@@ -125,7 +125,7 @@ def test_read_starsolo_gene_single_sample_smoke(tmp_path):
 
 def test_read_starsolo_gene_v2_features_two_columns(tmp_path):
     """Cell Ranger v2 features.tsv has 2 columns; reader must handle both."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -136,14 +136,14 @@ def test_read_starsolo_gene_v2_features_two_columns(tmp_path):
         feature_type_col=False,
         filtered_subset=["BC1", "BC2"],
     )
-    a = splikit.io.read_starsolo_gene(tmp_path / "s1", "s1")
+    a = scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
     assert a.n_vars == 2
     assert (a.var["feature_type"] == "Gene Expression").all()
 
 
 def test_read_starsolo_gene_var_names_symbols_with_collision(tmp_path):
     """gene_symbols mode collides for paralogs; var_names_make_unique is allowed there."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -153,7 +153,7 @@ def test_read_starsolo_gene_var_names_symbols_with_collision(tmp_path):
         counts=np.array([[1, 2], [3, 4], [5, 6]], dtype=np.int64),
         filtered_subset=["BC1", "BC2"],
     )
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         tmp_path / "s1", "s1", var_names="gene_symbols",
     )
     # var_names must be unique post make_unique.
@@ -164,7 +164,7 @@ def test_read_starsolo_gene_var_names_symbols_with_collision(tmp_path):
 
 def test_read_starsolo_gene_multi_sample_disjoint_genes(tmp_path):
     """Concat must zero-pad genes across samples."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -182,7 +182,7 @@ def test_read_starsolo_gene_multi_sample_disjoint_genes(tmp_path):
         counts=np.array([[7], [8]], dtype=np.int64),
         filtered_subset=["BC_C"],
     )
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         [tmp_path / "s1", tmp_path / "s2"], ["s1", "s2"],
     )
     assert a.n_obs == 3
@@ -203,7 +203,7 @@ def test_read_starsolo_gene_multi_sample_disjoint_genes(tmp_path):
 
 def test_read_starsolo_gene_explicit_whitelist_trims_raw(tmp_path):
     """Explicit whitelist forces raw/ source AND filters to the intersection."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     raw_barcodes = ["BC0", "BC1", "BC2", "BC3", "BC4"]
     _make_starsolo_gene_dir(
@@ -214,7 +214,7 @@ def test_read_starsolo_gene_explicit_whitelist_trims_raw(tmp_path):
         filtered_subset=["BC0", "BC1"],  # internal WL would give 2 cells
     )
     # Whitelist captures cells outside filtered/ (BC3, BC4) — proves raw/ source.
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         tmp_path / "s1", "s1",
         barcode_whitelists=[["BC1", "BC3", "BC4"]],
     )
@@ -224,7 +224,7 @@ def test_read_starsolo_gene_explicit_whitelist_trims_raw(tmp_path):
 
 def test_read_starsolo_gene_use_internal_false_no_whitelist(tmp_path):
     """use_internal_whitelist=False with no whitelist falls back to raw/ unfiltered."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     raw_barcodes = [f"BC{i}" for i in range(5)]
     _make_starsolo_gene_dir(
@@ -234,7 +234,7 @@ def test_read_starsolo_gene_use_internal_false_no_whitelist(tmp_path):
         counts=np.ones((1, 5), dtype=np.int64),
         filtered_subset=raw_barcodes[:2],
     )
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         tmp_path / "s1", "s1", use_internal_whitelist=False,
     )
     # filtered/ exists (with 2 cells) but is_internal_whitelist=False; we read
@@ -248,7 +248,7 @@ def test_read_starsolo_gene_use_internal_false_no_whitelist(tmp_path):
 
 def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
     """tissue_positions with v2 header populates squidpy-shaped fields."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     raw_barcodes = ["BC0", "BC1", "BC2", "BC3"]
     _make_starsolo_gene_dir(
@@ -266,7 +266,7 @@ def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
         "BC3,0,1,3,500.5,600.5\n"
     )
 
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         tmp_path / "s1", "s1",
         tissue_positions=[tp],
         spatial_library_ids=["sample_visium_1"],
@@ -288,7 +288,7 @@ def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
 
 def test_read_starsolo_gene_tissue_positions_v1_no_header(tmp_path):
     """v1 tissue_positions_list.csv (no header) is auto-detected."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     raw_barcodes = ["BC0", "BC1", "BC2"]
     _make_starsolo_gene_dir(
@@ -303,7 +303,7 @@ def test_read_starsolo_gene_tissue_positions_v1_no_header(tmp_path):
         "BC1,1,0,0,100.5,200.5\n"
         "BC2,0,1,2,300.5,400.5\n"
     )
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         tmp_path / "s1", "s1",
         tissue_positions=[tp],
     )
@@ -313,7 +313,7 @@ def test_read_starsolo_gene_tissue_positions_v1_no_header(tmp_path):
 
 def test_read_starsolo_gene_tissue_positions_warns_on_dual_whitelist(tmp_path):
     """Both tissue_positions and explicit whitelist → warn, tissue_positions wins."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -328,7 +328,7 @@ def test_read_starsolo_gene_tissue_positions_warns_on_dual_whitelist(tmp_path):
         "BC1,1,0,0,1.0,2.0\n"
     )
     with pytest.warns(UserWarning, match="tissue_positions takes precedence"):
-        a = splikit.io.read_starsolo_gene(
+        a = scsplice.io.read_starsolo_gene(
             tmp_path / "s1", "s1",
             barcode_whitelists=[["BC2", "BC3"]],
             tissue_positions=[tp],
@@ -339,7 +339,7 @@ def test_read_starsolo_gene_tissue_positions_warns_on_dual_whitelist(tmp_path):
 
 
 def test_read_starsolo_gene_dimension_mismatch_raises(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     base = _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -352,11 +352,11 @@ def test_read_starsolo_gene_dimension_mismatch_raises(tmp_path):
     bc_path = base / "Solo.out" / "Gene" / "filtered" / "barcodes.tsv"
     bc_path.write_text("BC1\n")
     with pytest.raises(ValueError, match="dimension mismatch"):
-        splikit.io.read_starsolo_gene(tmp_path / "s1", "s1")
+        scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
 
 
 def test_read_starsolo_gene_argument_validation(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
@@ -365,11 +365,11 @@ def test_read_starsolo_gene_argument_validation(tmp_path):
         filtered_subset=["BC1"],
     )
     with pytest.raises(ValueError, match="must be unique"):
-        splikit.io.read_starsolo_gene([tmp_path / "s1", tmp_path / "s1"], ["s1", "s1"])
+        scsplice.io.read_starsolo_gene([tmp_path / "s1", tmp_path / "s1"], ["s1", "s1"])
     with pytest.raises(ValueError, match="must equal"):
-        splikit.io.read_starsolo_gene([tmp_path / "s1"], ["s1", "s2"])
+        scsplice.io.read_starsolo_gene([tmp_path / "s1"], ["s1", "s2"])
     with pytest.raises(ValueError, match="var_names"):
-        splikit.io.read_starsolo_gene(tmp_path / "s1", "s1", var_names="bogus")
+        scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1", var_names="bogus")
 
 
 # -----------------
@@ -379,10 +379,10 @@ def test_read_starsolo_gene_argument_validation(tmp_path):
 @pytest.mark.real_data
 def test_read_starsolo_gene_real_two_samples(real_data_samples, real_data_sample_ids):
     """Cross-check against scanpy.read_mtx on the same two STARsolo samples."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
     sc = pytest.importorskip("scanpy")
 
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         real_data_samples, real_data_sample_ids,
         # Filtered/ default — same as scanpy's typical 10x flow.
     )
@@ -428,9 +428,9 @@ def test_read_starsolo_gene_real_two_samples(real_data_samples, real_data_sample
 @pytest.mark.real_data
 def test_read_starsolo_gene_real_smoke_print(real_data_samples, real_data_sample_ids, capsys):
     """Verbose smoke test: read both samples and print shape."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
-    a = splikit.io.read_starsolo_gene(
+    a = scsplice.io.read_starsolo_gene(
         real_data_samples, real_data_sample_ids, verbose=True,
     )
     out = capsys.readouterr().out

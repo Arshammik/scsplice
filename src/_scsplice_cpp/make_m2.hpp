@@ -2,7 +2,7 @@
 
 #include <Eigen/SparseCore>
 
-namespace splikit {
+namespace scsplice {
 
 // Build the exclusion matrix M2 from inclusion counts M1 and an LJV grouping.
 // For each (event i, cell j): M2[i,j] = sum(M1[k,j] for k in same group as i) - M1[i,j].
@@ -24,4 +24,4 @@ make_m2(const Eigen::SparseMatrix<double, Eigen::ColMajor>& M1,
         const Eigen::Ref<const Eigen::VectorXi>& group_ids,
         int n_threads);
 
-}  // namespace splikit
+}  // namespace scsplice

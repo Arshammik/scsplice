@@ -1,4 +1,4 @@
-"""Tests for splikit.io.read_starsolo_velocyto.
+"""Tests for scsplice.io.read_starsolo_velocyto.
 
 Both wire formats are exercised:
   - **split** (modern): three sibling spliced.mtx / unspliced.mtx / ambiguous.mtx
@@ -76,7 +76,7 @@ def _make_velocyto_stacked(
 # ---------------------
 
 def test_velocyto_split_single_sample_smoke(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     n_genes, n_cells = 4, 6
     rng = np.random.default_rng(0)
@@ -90,7 +90,7 @@ def test_velocyto_split_single_sample_smoke(tmp_path):
         barcodes=[f"BC{i}" for i in range(n_cells)],
         spliced=s, unspliced=u, ambiguous=am,
     )
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         tmp_path / "s1", "s1", use_internal_whitelist=False,
     )
     assert a.n_obs == n_cells
@@ -109,11 +109,11 @@ def test_velocyto_split_single_sample_smoke(tmp_path):
     assert np.array_equal(np.asarray(a.layers["unspliced"].todense()), u.T)
     assert np.array_equal(np.asarray(a.layers["ambiguous"].todense()), am.T)
     # uns / wire_format detection.
-    assert a.uns["splikit"]["params"]["read_starsolo_velocyto"]["wire_formats"] == {"s1": "split"}
+    assert a.uns["scsplice"]["params"]["read_starsolo_velocyto"]["wire_formats"] == {"s1": "split"}
 
 
 def test_velocyto_stacked_format_decoded(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     n_genes, n_cells = 3, 4
     s = np.array([[1, 0, 0, 0], [2, 2, 0, 0], [0, 0, 3, 3]], dtype=np.int64)
@@ -126,17 +126,17 @@ def test_velocyto_stacked_format_decoded(tmp_path):
         barcodes=[f"BC{i}" for i in range(n_cells)],
         spliced=s, unspliced=u, ambiguous=am,
     )
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         tmp_path / "s1", "s1", use_internal_whitelist=False,
     )
-    assert a.uns["splikit"]["params"]["read_starsolo_velocyto"]["wire_formats"] == {"s1": "stacked"}
+    assert a.uns["scsplice"]["params"]["read_starsolo_velocyto"]["wire_formats"] == {"s1": "stacked"}
     assert np.array_equal(np.asarray(a.layers["spliced"].todense()), s.T)
     assert np.array_equal(np.asarray(a.layers["unspliced"].todense()), u.T)
     assert np.array_equal(np.asarray(a.layers["ambiguous"].todense()), am.T)
 
 
 def test_velocyto_split_multi_sample_concat_disjoint_genes(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_velocyto_split(
         tmp_path / "s1",
@@ -154,7 +154,7 @@ def test_velocyto_split_multi_sample_concat_disjoint_genes(tmp_path):
         unspliced=np.array([[0], [1]], dtype=np.int64),
         ambiguous=np.array([[0], [0]], dtype=np.int64),
     )
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         [tmp_path / "s1", tmp_path / "s2"], ["s1", "s2"],
         use_internal_whitelist=False,
     )
@@ -173,7 +173,7 @@ def test_velocyto_split_multi_sample_concat_disjoint_genes(tmp_path):
 
 
 def test_velocyto_explicit_whitelist(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_velocyto_split(
         tmp_path / "s1",
@@ -183,7 +183,7 @@ def test_velocyto_explicit_whitelist(tmp_path):
         unspliced=np.array([[0, 0, 0, 0]], dtype=np.int64),
         ambiguous=np.array([[0, 0, 0, 0]], dtype=np.int64),
     )
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         tmp_path / "s1", "s1",
         barcode_whitelists=[["BC1", "BC3"]],
         use_internal_whitelist=False,
@@ -193,7 +193,7 @@ def test_velocyto_explicit_whitelist(tmp_path):
 
 
 def test_velocyto_tissue_positions_squidpy_fields(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_velocyto_split(
         tmp_path / "s1",
@@ -209,7 +209,7 @@ def test_velocyto_tissue_positions_squidpy_fields(tmp_path):
         "BC2,1,2,3,10.0,20.0\n"
         "BC4,0,4,5,30.0,40.0\n"
     )
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         tmp_path / "s1", "s1",
         tissue_positions=[tp],
         spatial_library_ids=["lib_X"],
@@ -224,7 +224,7 @@ def test_velocyto_tissue_positions_squidpy_fields(tmp_path):
 
 def test_velocyto_stacked_dimension_mismatch(tmp_path):
     """Stacked layout with wrong row count → ValueError."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     n_genes, n_cells = 2, 3
     raw = tmp_path / "s1" / "Solo.out" / "Velocyto" / "raw"
@@ -235,13 +235,13 @@ def test_velocyto_stacked_dimension_mismatch(tmp_path):
     bad = np.arange(5 * n_cells, dtype=np.int64).reshape(5, n_cells)
     _write_mtx(raw / "matrix.mtx", bad)
     with pytest.raises(ValueError, match="3 \\* n_genes"):
-        splikit.io.read_starsolo_velocyto(
+        scsplice.io.read_starsolo_velocyto(
             tmp_path / "s1", "s1", use_internal_whitelist=False,
         )
 
 
 def test_velocyto_argument_validation(tmp_path):
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     _make_velocyto_split(
         tmp_path / "s1",
@@ -252,12 +252,12 @@ def test_velocyto_argument_validation(tmp_path):
         ambiguous=np.array([[0]], dtype=np.int64),
     )
     with pytest.raises(ValueError, match="must be unique"):
-        splikit.io.read_starsolo_velocyto(
+        scsplice.io.read_starsolo_velocyto(
             [tmp_path / "s1", tmp_path / "s1"], ["s1", "s1"],
             use_internal_whitelist=False,
         )
     with pytest.raises(ValueError, match="must equal"):
-        splikit.io.read_starsolo_velocyto(
+        scsplice.io.read_starsolo_velocyto(
             [tmp_path / "s1"], ["s1", "s2"],
             use_internal_whitelist=False,
         )
@@ -276,9 +276,9 @@ def test_velocyto_real_two_samples_split_format(real_data_samples, real_data_sam
     over ~6.7M barcodes, so loading without a whitelist OOM-kills the test.
     """
     import scipy.io as sio  # noqa: PLC0415
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         real_data_samples, real_data_sample_ids,
         use_internal_whitelist=True,
     )
@@ -292,7 +292,7 @@ def test_velocyto_real_two_samples_split_format(real_data_samples, real_data_sam
     assert a.X.shape == a.layers["spliced"].shape
     assert a.X.nnz == a.layers["spliced"].nnz
 
-    wf = a.uns["splikit"]["params"]["read_starsolo_velocyto"]["wire_formats"]
+    wf = a.uns["scsplice"]["params"]["read_starsolo_velocyto"]["wire_formats"]
     assert all(v == "split" for v in wf.values())
 
     # Cross-check sample 0's spliced.mtx against a direct scipy.io.mmread,
@@ -343,9 +343,9 @@ def test_velocyto_real_scvelo_compatible_if_available(real_data_samples, real_da
     Loads with the internal whitelist so we stay below the OOM threshold on
     the real Velocyto MTX (~1.2 GB / sample with ~6.7M raw barcodes).
     """
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
-    a = splikit.io.read_starsolo_velocyto(
+    a = scsplice.io.read_starsolo_velocyto(
         real_data_samples, real_data_sample_ids,
         use_internal_whitelist=True,
     )

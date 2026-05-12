@@ -4,8 +4,8 @@
 
 ```bash
 # Clone
-git clone https://github.com/Arshammik/splikitpy
-cd splikitpy
+git clone https://github.com/Arshammik/scsplice
+cd scsplice
 
 # Install Eigen3 (required for the C++ extension)
 sudo apt-get install libeigen3-dev     # Debian / Ubuntu
@@ -24,13 +24,13 @@ The `scikit-build-core` backend compiles the C++ extension during `pip install`.
 pytest
 
 # With coverage
-pytest --cov=splikit --cov-report=term-missing
+pytest --cov=scsplice --cov-report=term-missing
 
 # Fast subset only
 pytest tests/ -k "not slow" -v
 ```
 
-For cross-language equivalence regression against R splikit, see the [`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
+For cross-language equivalence regression against R splikit, see the [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation).
 
 ## Building the docs locally
 
@@ -56,13 +56,13 @@ The docs site is at `http://localhost:8000` after `mkdocs serve`.
 ## Project structure
 
 ```
-src/splikit/
+src/scsplice/
   io/          read_starsolo and STARsolo parsing internals
   tl/          make_m2, pseudo_correlation
   pp/          highly_variable_events
   pl/          (reserved for v2.0 plotting)
   _core/       validators, shared utilities
-  _splikit_cpp (pybind11 extension, built from src/cpp/)
+  _scsplice_cpp (pybind11 extension, built from src/cpp/)
 tests/
   test_make_m2.py
   test_highly_variable_events.py
@@ -73,7 +73,7 @@ tests/
   test_split.py
   test_validators.py
 docs/
-  api/         auto-generated from docstrings via mkdocstrings
+  reference/   auto-generated from docstrings via mkdocstrings
   tutorials/   hand-written notebooks
   how-to/      recipe pages
   explanation/ conceptual background

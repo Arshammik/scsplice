@@ -6,11 +6,11 @@
 #include <utility>
 #include <vector>
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
 #include <omp.h>
 #endif
 
-namespace splikit {
+namespace scsplice {
 
 using SpMat = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 using StorageIndex = SpMat::StorageIndex;  // == int (default)
@@ -116,7 +116,7 @@ SpMat make_m2(const SpMat& M1_in,
         col_nnz[j] = cnt;
     };
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
     if (n_threads > 1) {
         #pragma omp parallel num_threads(n_threads)
         {
@@ -173,7 +173,7 @@ SpMat make_m2(const SpMat& M1_in,
     };
 
     // Pass 2: fill values, sort per column, write to disjoint output slices.
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
     if (n_threads > 1) {
         #pragma omp parallel num_threads(n_threads)
         {
@@ -221,4 +221,4 @@ SpMat make_m2(const SpMat& M1_in,
     return result;
 }
 
-}  // namespace splikit
+}  // namespace scsplice

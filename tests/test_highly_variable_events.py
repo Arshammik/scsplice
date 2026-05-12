@@ -1,4 +1,4 @@
-"""Tests for splikit.pp.highly_variable_events.
+"""Tests for scsplice.pp.highly_variable_events.
 
 Per-row deviance is bit-identical across thread counts (each row's accumulation
 is fixed-order serial within one thread). No cross-row reductions in the kernel.
@@ -15,8 +15,8 @@ import scipy.sparse as sp
 
 def _openmp_enabled() -> bool:
     try:
-        from splikit import _splikit_cpp  # noqa: PLC0415
-        return bool(_splikit_cpp.__openmp__)
+        from scsplice import _scsplice_cpp  # noqa: PLC0415
+        return bool(_scsplice_cpp.__openmp__)
     except ImportError:
         return False
 
@@ -71,15 +71,15 @@ def _make_paired_adata(
         index=[f"bc{i}-{s}" for i, s in enumerate(sample_assignment)],
     )
     a = ad.AnnData(layers={"M1": M1, "M2": M2}, obs=obs, var=var)
-    a.uns["splikit"] = {"m2_valid": True}
+    a.uns["scsplice"] = {"m2_valid": True}
     return a
 
 
 def test_hve_smoke():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     adata = _make_paired_adata()
-    splikit.pp.highly_variable_events(adata, min_row_sum=10.0)
+    scsplice.pp.highly_variable_events(adata, min_row_sum=10.0)
 
     assert "sum_deviance" in adata.var.columns
     assert "highly_variable" in adata.var.columns
@@ -89,16 +89,16 @@ def test_hve_smoke():
     n_passing = int(np.isfinite(adata.var["sum_deviance"]).sum())
     assert int(adata.var["highly_variable"].sum()) == n_passing
     assert n_passing > 0
-    params = adata.uns["splikit"]["params"]["highly_variable_events"]
+    params = adata.uns["scsplice"]["params"]["highly_variable_events"]
     assert params["min_row_sum"] == 10.0
     assert params["n_libraries"] == 2
 
 
 def test_hve_n_top_selection():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     adata = _make_paired_adata(n_events=30)
-    splikit.pp.highly_variable_events(adata, min_row_sum=5.0, n_top=5)
+    scsplice.pp.highly_variable_events(adata, min_row_sum=5.0, n_top=5)
 
     assert int(adata.var["highly_variable"].sum()) == 5
     selected_dev = adata.var.loc[adata.var["highly_variable"], "sum_deviance"]
@@ -109,22 +109,22 @@ def test_hve_n_top_selection():
 
 
 def test_hve_no_events_passing_raises():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     adata = _make_paired_adata(n_events=8, n_cells=20, density=0.1, seed=42)
     with pytest.raises(ValueError, match="No events pass"):
-        splikit.pp.highly_variable_events(adata, min_row_sum=1e9)
+        scsplice.pp.highly_variable_events(adata, min_row_sum=1e9)
 
 
 def test_hve_partial_filter():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     adata = _make_paired_adata(n_events=20, n_cells=100)
     # Zero out the M1 column for half the events so they fail the M1 row-sum filter.
     M1 = adata.layers["M1"].toarray()
     M1[:, : adata.n_vars // 2] = 0.0
     adata.layers["M1"] = sp.csc_matrix(M1)
-    splikit.pp.highly_variable_events(adata, min_row_sum=10.0)
+    scsplice.pp.highly_variable_events(adata, min_row_sum=10.0)
     has_score = np.isfinite(adata.var["sum_deviance"])
     n_passing = int(has_score.sum())
     assert 0 < n_passing < adata.n_vars
@@ -136,13 +136,13 @@ def test_hve_partial_filter():
 def test_hve_thread_determinism():
     if not _openmp_enabled():
         pytest.skip("OpenMP not enabled in this build")
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a1 = _make_paired_adata(n_events=80, n_cells=400, n_groups=10, n_samples=3,
                             seed=7)
     a4 = a1.copy()
-    splikit.pp.highly_variable_events(a1, min_row_sum=10.0, n_threads=1)
-    splikit.pp.highly_variable_events(a4, min_row_sum=10.0, n_threads=4)
+    scsplice.pp.highly_variable_events(a1, min_row_sum=10.0, n_threads=1)
+    scsplice.pp.highly_variable_events(a4, min_row_sum=10.0, n_threads=4)
 
     s1 = a1.var["sum_deviance"].to_numpy()
     s4 = a4.var["sum_deviance"].to_numpy()
@@ -152,41 +152,41 @@ def test_hve_thread_determinism():
 
 
 def test_hve_inplace_vs_copy():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_paired_adata(n_events=10, n_cells=50)
-    out = splikit.pp.highly_variable_events(a, min_row_sum=5.0, inplace=True)
+    out = scsplice.pp.highly_variable_events(a, min_row_sum=5.0, inplace=True)
     assert out is None
     assert "sum_deviance" in a.var.columns
 
     a2 = _make_paired_adata(n_events=10, n_cells=50)
-    out2 = splikit.pp.highly_variable_events(a2, min_row_sum=5.0, inplace=False)
+    out2 = scsplice.pp.highly_variable_events(a2, min_row_sum=5.0, inplace=False)
     assert out2 is not None
     assert "sum_deviance" not in a2.var.columns
     assert "sum_deviance" in out2.var.columns
 
 
 def test_hve_requires_m2_valid():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_paired_adata()
-    a.uns["splikit"]["m2_valid"] = False
+    a.uns["scsplice"]["m2_valid"] = False
     with pytest.raises(RuntimeError, match="m2_valid"):
-        splikit.pp.highly_variable_events(a, min_row_sum=10.0)
+        scsplice.pp.highly_variable_events(a, min_row_sum=10.0)
 
 
 def test_hve_requires_sample_key():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_paired_adata()
     del a.obs["sample_id"]
     with pytest.raises(KeyError, match="sample_id"):
-        splikit.pp.highly_variable_events(a, min_row_sum=10.0)
+        scsplice.pp.highly_variable_events(a, min_row_sum=10.0)
 
 
 def test_hve_p_hat_clamp_zero_row_returns_zero_deviance():
     """Row with zero variation (M2==0 everywhere) gets p_hat==1, clamped to 0."""
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_paired_adata(n_events=8, n_cells=80, density=0.5)
     # Force one row to have M2 all-zero (p_hat = 1 -> clamped to 0 deviance).
@@ -199,5 +199,5 @@ def test_hve_p_hat_clamp_zero_row_returns_zero_deviance():
     a.layers["M1"] = sp.csc_matrix(M1)
 
     # min_row_sum on M2 row is 0, so this event is filtered out (NaN).
-    splikit.pp.highly_variable_events(a, min_row_sum=10.0)
+    scsplice.pp.highly_variable_events(a, min_row_sum=10.0)
     assert np.isnan(a.var["sum_deviance"].iloc[0])

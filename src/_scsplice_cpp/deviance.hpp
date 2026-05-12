@@ -2,7 +2,7 @@
 
 #include <Eigen/SparseCore>
 
-namespace splikit {
+namespace scsplice {
 
 // Per-event ratio binomial deviance for one library.
 //
@@ -27,4 +27,4 @@ calc_deviances_ratio(const Eigen::SparseMatrix<double, Eigen::ColMajor>& M1,
                      const Eigen::SparseMatrix<double, Eigen::ColMajor>& M2,
                      int n_threads);
 
-}  // namespace splikit
+}  // namespace scsplice

@@ -1,4 +1,4 @@
-"""Tests for splikit.tl.pseudo_correlation.
+"""Tests for scsplice.tl.pseudo_correlation.
 
 Per-event results are bit-identical across thread counts (disjoint scalar
 writes; no cross-event reductions in the kernel).
@@ -15,8 +15,8 @@ import scipy.sparse as sp
 
 def _openmp_enabled() -> bool:
     try:
-        from splikit import _splikit_cpp  # noqa: PLC0415
-        return bool(_splikit_cpp.__openmp__)
+        from scsplice import _scsplice_cpp  # noqa: PLC0415
+        return bool(_scsplice_cpp.__openmp__)
     except ImportError:
         return False
 
@@ -49,17 +49,17 @@ def _make_adata(n_events: int = 25, n_cells: int = 200, *, seed: int = 0) -> ad.
         index=[f"bc{i}-s1" for i in range(n_cells)],
     )
     a = ad.AnnData(layers={"M1": M1, "M2": M2}, obs=obs, var=var)
-    a.uns["splikit"] = {"m2_valid": True}
+    a.uns["scsplice"] = {"m2_valid": True}
     return a
 
 
 def test_pseudo_correlation_smoke():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(seed=42)
     rng = np.random.default_rng(0)
     zdb = rng.normal(size=(a.n_vars, a.n_obs))
-    splikit.tl.pseudo_correlation(a, zdb, metric="CoxSnell")
+    scsplice.tl.pseudo_correlation(a, zdb, metric="CoxSnell")
     assert "pseudo_correlation" in a.var.columns
     r = a.var["pseudo_correlation"].to_numpy()
     finite = np.isfinite(r)
@@ -71,13 +71,13 @@ def test_pseudo_correlation_smoke():
 
 
 def test_pseudo_correlation_metric_dispatch():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=15, seed=7)
     rng = np.random.default_rng(0)
     zdb = rng.normal(size=(a.n_vars, a.n_obs))
-    a_cox = splikit.tl.pseudo_correlation(a, zdb, metric="CoxSnell", inplace=False)
-    a_nag = splikit.tl.pseudo_correlation(a, zdb, metric="Nagelkerke", inplace=False)
+    a_cox = scsplice.tl.pseudo_correlation(a, zdb, metric="CoxSnell", inplace=False)
+    a_nag = scsplice.tl.pseudo_correlation(a, zdb, metric="Nagelkerke", inplace=False)
     cox = a_cox.var["pseudo_correlation"].to_numpy()
     nag = a_nag.var["pseudo_correlation"].to_numpy()
     finite = np.isfinite(cox) & np.isfinite(nag)
@@ -87,45 +87,45 @@ def test_pseudo_correlation_metric_dispatch():
 
 
 def test_pseudo_correlation_unknown_metric():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata()
     zdb = np.zeros((a.n_vars, a.n_obs))
     with pytest.raises(ValueError, match="metric"):
-        splikit.tl.pseudo_correlation(a, zdb, metric="bogus")
+        scsplice.tl.pseudo_correlation(a, zdb, metric="bogus")
 
 
 def test_pseudo_correlation_zdb_shape_validation():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=5, n_cells=20)
     bad_zdb = np.zeros((a.n_vars, a.n_obs + 3))
     with pytest.raises(ValueError, match="zdb shape"):
-        splikit.tl.pseudo_correlation(a, bad_zdb)
+        scsplice.tl.pseudo_correlation(a, bad_zdb)
 
 
 def test_pseudo_correlation_requires_m2_valid():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata()
-    a.uns["splikit"]["m2_valid"] = False
+    a.uns["scsplice"]["m2_valid"] = False
     zdb = np.zeros((a.n_vars, a.n_obs))
     with pytest.raises(RuntimeError, match="m2_valid"):
-        splikit.tl.pseudo_correlation(a, zdb)
+        scsplice.tl.pseudo_correlation(a, zdb)
 
 
 @pytest.mark.openmp
 def test_pseudo_correlation_thread_determinism():
     if not _openmp_enabled():
         pytest.skip("OpenMP not enabled in this build")
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a1 = _make_adata(n_events=40, n_cells=300, seed=11)
     a4 = a1.copy()
     rng = np.random.default_rng(99)
     zdb = rng.normal(size=(a1.n_vars, a1.n_obs))
-    splikit.tl.pseudo_correlation(a1, zdb, n_threads=1)
-    splikit.tl.pseudo_correlation(a4, zdb, n_threads=4)
+    scsplice.tl.pseudo_correlation(a1, zdb, n_threads=1)
+    scsplice.tl.pseudo_correlation(a4, zdb, n_threads=4)
     r1 = a1.var["pseudo_correlation"].to_numpy()
     r4 = a4.var["pseudo_correlation"].to_numpy()
     nan1 = np.isnan(r1)
@@ -134,26 +134,26 @@ def test_pseudo_correlation_thread_determinism():
 
 
 def test_pseudo_correlation_null_distribution():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=20, n_cells=150, seed=3)
     rng = np.random.default_rng(0)
     zdb = rng.normal(size=(a.n_vars, a.n_obs))
-    splikit.tl.pseudo_correlation(a, zdb, n_permutations=5, seed=42)
+    scsplice.tl.pseudo_correlation(a, zdb, n_permutations=5, seed=42)
     null = a.varm["pseudo_correlation_null"]
     assert null.shape == (a.n_vars, 5)
     assert null.dtype == np.float64
 
 
 def test_pseudo_correlation_seeded_null_reproducible():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a1 = _make_adata(n_events=15, n_cells=100, seed=5)
     a2 = a1.copy()
     rng = np.random.default_rng(0)
     zdb = rng.normal(size=(a1.n_vars, a1.n_obs))
-    splikit.tl.pseudo_correlation(a1, zdb, n_permutations=3, seed=42)
-    splikit.tl.pseudo_correlation(a2, zdb, n_permutations=3, seed=42)
+    scsplice.tl.pseudo_correlation(a1, zdb, n_permutations=3, seed=42)
+    scsplice.tl.pseudo_correlation(a2, zdb, n_permutations=3, seed=42)
     assert np.array_equal(
         np.nan_to_num(a1.varm["pseudo_correlation_null"], nan=-9.0),
         np.nan_to_num(a2.varm["pseudo_correlation_null"], nan=-9.0),
@@ -164,14 +164,14 @@ def test_pseudo_correlation_sign_follows_slope():
     """A perfectly increasing predictor relative to a constant ratio should
     yield a non-negative correlation; a flipped predictor should flip the sign.
     """
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=8, n_cells=120, seed=1)
     rng = np.random.default_rng(0)
     zdb_pos = rng.normal(size=(a.n_vars, a.n_obs))
 
-    a_pos = splikit.tl.pseudo_correlation(a, zdb_pos, inplace=False)
-    a_neg = splikit.tl.pseudo_correlation(a, -zdb_pos, inplace=False)
+    a_pos = scsplice.tl.pseudo_correlation(a, zdb_pos, inplace=False)
+    a_neg = scsplice.tl.pseudo_correlation(a, -zdb_pos, inplace=False)
     p = a_pos.var["pseudo_correlation"].to_numpy()
     n = a_neg.var["pseudo_correlation"].to_numpy()
     finite = np.isfinite(p) & np.isfinite(n)
@@ -180,16 +180,16 @@ def test_pseudo_correlation_sign_follows_slope():
 
 
 def test_pseudo_correlation_inplace_vs_copy():
-    import splikit  # noqa: PLC0415
+    import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=10, n_cells=80)
     zdb = np.zeros((a.n_vars, a.n_obs))
-    out = splikit.tl.pseudo_correlation(a, zdb, inplace=True)
+    out = scsplice.tl.pseudo_correlation(a, zdb, inplace=True)
     assert out is None
     assert "pseudo_correlation" in a.var.columns
 
     a2 = _make_adata(n_events=10, n_cells=80)
-    out2 = splikit.tl.pseudo_correlation(a2, zdb, inplace=False)
+    out2 = scsplice.tl.pseudo_correlation(a2, zdb, inplace=False)
     assert out2 is not None
     assert "pseudo_correlation" not in a2.var.columns
     assert "pseudo_correlation" in out2.var.columns

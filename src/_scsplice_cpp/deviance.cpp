@@ -5,11 +5,11 @@
 #include <limits>
 #include <stdexcept>
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
 #include <omp.h>
 #endif
 
-namespace splikit {
+namespace scsplice {
 
 using SpMat = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 using SpMatRM = Eigen::SparseMatrix<double, Eigen::RowMajor>;
@@ -130,7 +130,7 @@ calc_deviances_ratio(const SpMat& M1, const SpMat& M2, int n_threads) {
     M1_rm.makeCompressed();
     M2_rm.makeCompressed();
 
-#ifdef SPLIKIT_USE_OPENMP
+#ifdef SCSPLICE_USE_OPENMP
     if (n_threads > 1) {
         #pragma omp parallel for schedule(dynamic) num_threads(n_threads)
         for (Eigen::Index i = 0; i < n_rows; ++i) {
@@ -147,4 +147,4 @@ calc_deviances_ratio(const SpMat& M1, const SpMat& M2, int n_threads) {
     return dev;
 }
 
-}  // namespace splikit
+}  // namespace scsplice

@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from splikit._core._validators import (
+from scsplice._core._validators import (
     mark_m2_valid,
+    setdefault_scsplice_ns,
     validate_m1_layer,
     validate_var_schema,
 )
@@ -23,16 +24,16 @@ __all__ = ["make_m2"]
 
 
 def _import_extension():
-    """Defer the C++ extension import so ``import splikit.tl`` works without a build."""
+    """Defer the C++ extension import so ``import scsplice.tl`` works without a build."""
     try:
-        from splikit import _splikit_cpp  # noqa: PLC0415
+        from scsplice import _scsplice_cpp  # noqa: PLC0415
     except ImportError as exc:
         raise ImportError(
-            "splikit's C++ extension (_splikit_cpp) is not built. "
-            "Run `pip install -e .` (or `pip install splikit-py`) in an "
+            "scsplice's C++ extension (_scsplice_cpp) is not built. "
+            "Run `pip install -e .` (or `pip install scsplice`) in an "
             "environment with Eigen3 available."
         ) from exc
-    return _splikit_cpp
+    return _scsplice_cpp
 
 
 def _validate_and_densify_group_ids(group_ids: np.ndarray) -> np.ndarray:
@@ -78,12 +79,12 @@ def make_m2(
     Parameters
     ----------
     adata
-        Splicing AnnData built by :func:`splikit.io.read_starsolo` or equivalent.
+        Splicing AnnData built by :func:`scsplice.io.read_starsolo` or equivalent.
         Must have ``layers['M1']`` (cells × events, sparse CSC, ``float64``) and
-        the var columns required by :func:`splikit._core._validators.validate_var_schema`.
+        the var columns required by :func:`scsplice._core._validators.validate_var_schema`.
     n_threads
         OpenMP thread count for the kernel. ``n_threads > 1`` requires a build
-        with OpenMP enabled (check ``splikit._splikit_cpp.__openmp__``). The
+        with OpenMP enabled (check ``scsplice._scsplice_cpp.__openmp__``). The
         kernel produces byte-identical output regardless of thread count.
     copy
         Mutate ``adata`` in place and return ``None`` (default), or operate on a
@@ -95,8 +96,8 @@ def make_m2(
 
     Notes
     -----
-    Sets ``adata.uns['splikit']['m2_valid'] = True`` and records the call params
-    under ``adata.uns['splikit']['params']['make_m2']``.
+    Sets ``adata.uns['scsplice']['m2_valid'] = True`` and records the call params
+    under ``adata.uns['scsplice']['params']['make_m2']``.
 
     The kernel reads ``layers['M1']``, transposes to events × cells at the C++
     boundary (the kernel works in that layout), and transposes the result back
@@ -134,7 +135,7 @@ def make_m2(
     adata.layers["M2"] = M2
 
     mark_m2_valid(adata)
-    ns = adata.uns.setdefault("splikit", {})
+    ns = setdefault_scsplice_ns(adata)
     ns.setdefault("params", {})["make_m2"] = {"n_threads": int(n_threads)}
 
     return adata if copy else None

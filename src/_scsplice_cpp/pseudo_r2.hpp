@@ -4,7 +4,7 @@
 #include <Eigen/SparseCore>
 #include <string>
 
-namespace splikit {
+namespace scsplice {
 
 // Per-event signed pseudo-correlation between an external Z predictor and the
 // M1/(M1+M2) ratio.
@@ -17,7 +17,7 @@ namespace splikit {
 //
 // Z orientation contract: Z is **events x cells** (n_events rows, n_cells
 // columns); the kernel indexes Z(i, c) for event i, cell c. The Python
-// wrapper enforces this on its side (see splikit.tl.pseudo_correlation
+// wrapper enforces this on its side (see scsplice.tl.pseudo_correlation
 // shape check) and the binding docstring documents the contract.
 //
 // Cross-language tolerance vs R splikit::cppBetabinPseudoR2:
@@ -38,4 +38,4 @@ pseudo_correlation(const Eigen::Ref<const Eigen::MatrixXd>& Z,
                    const std::string& metric,
                    int n_threads);
 
-}  // namespace splikit
+}  // namespace scsplice

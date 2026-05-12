@@ -7,6 +7,8 @@ possible, no copies).
 
 from __future__ import annotations
 
+import warnings
+
 import anndata as ad
 import numpy as np
 import scipy.sparse as sp
@@ -14,12 +16,67 @@ import scipy.sparse as sp
 
 __all__ = [
     "REQUIRED_VAR_COLUMNS",
+    "get_scsplice_ns",
     "invalidate_m2",
     "mark_m2_valid",
+    "setdefault_scsplice_ns",
     "validate_m1_layer",
     "validate_paired_layers",
     "validate_var_schema",
 ]
+
+
+_LEGACY_UNS_KEY = "splikit"
+_UNS_KEY = "scsplice"
+
+
+def get_scsplice_ns(adata: ad.AnnData) -> dict:
+    """Return the ``adata.uns['scsplice']`` namespace, migrating legacy key.
+
+    Compat shim for the ``splikit`` → ``scsplice`` package rename. AnnData
+    objects written by ``splikit-py`` 1.0.0 carry ``uns['splikit']``. On first
+    encounter we emit a one-shot ``FutureWarning`` and migrate the dict in
+    place to ``uns['scsplice']`` so subsequent reads are clean and downstream
+    writes use the canonical key. Returns an empty dict if neither key exists
+    (callers that need to *write* should use :func:`setdefault_scsplice_ns`).
+    """
+    if _UNS_KEY in adata.uns:
+        return adata.uns[_UNS_KEY]
+    if _LEGACY_UNS_KEY in adata.uns:
+        warnings.warn(
+            "AnnData uses legacy uns['splikit'] key; this will be removed in "
+            "scsplice 3.0. Migrate with: "
+            "adata.uns['scsplice'] = adata.uns.pop('splikit')",
+            FutureWarning,
+            stacklevel=2,
+        )
+        adata.uns[_UNS_KEY] = adata.uns.pop(_LEGACY_UNS_KEY)
+        return adata.uns[_UNS_KEY]
+    return {}
+
+
+def setdefault_scsplice_ns(adata: ad.AnnData) -> dict:
+    """Return ``uns['scsplice']``, creating it if absent. Migrates legacy key.
+
+    Write-side counterpart of :func:`get_scsplice_ns`: if neither key exists,
+    creates a new empty dict at ``uns['scsplice']`` and returns it. If the
+    legacy ``uns['splikit']`` key is present, migrates it in place with a
+    one-shot ``FutureWarning``.
+    """
+    if _UNS_KEY in adata.uns:
+        return adata.uns[_UNS_KEY]
+    if _LEGACY_UNS_KEY in adata.uns:
+        warnings.warn(
+            "AnnData uses legacy uns['splikit'] key; this will be removed in "
+            "scsplice 3.0. Migrate with: "
+            "adata.uns['scsplice'] = adata.uns.pop('splikit')",
+            FutureWarning,
+            stacklevel=2,
+        )
+        adata.uns[_UNS_KEY] = adata.uns.pop(_LEGACY_UNS_KEY)
+        return adata.uns[_UNS_KEY]
+    adata.uns[_UNS_KEY] = {}
+    return adata.uns[_UNS_KEY]
 
 
 REQUIRED_VAR_COLUMNS: tuple[str, ...] = (
@@ -39,13 +96,13 @@ def validate_m1_layer(adata: ad.AnnData) -> None:
     if "M1" not in adata.layers:
         raise KeyError(
             "adata.layers['M1'] is required. Build the splicing AnnData via "
-            "splikit.io.read_starsolo()."
+            "scsplice.io.read_starsolo()."
         )
     M1 = adata.layers["M1"]
     if not sp.issparse(M1):
         raise TypeError(
             f"layers['M1'] must be scipy.sparse, got {type(M1).__name__}. "
-            "splikit-py never densifies M1; convert before assigning."
+            "scsplice never densifies M1; convert before assigning."
         )
     if M1.shape != adata.shape:
         raise ValueError(f"layers['M1'] shape {M1.shape} != adata.shape {adata.shape}")
@@ -59,13 +116,13 @@ def validate_paired_layers(adata: ad.AnnData, *, require_m2_valid: bool = True) 
     """Assert M1 and M2 are both present, sparse, float64, and shape-aligned.
 
     When ``require_m2_valid=True`` (the default) also assert
-    ``adata.uns['splikit']['m2_valid']`` so callers see a clear error rather than
+    ``adata.uns['scsplice']['m2_valid']`` so callers see a clear error rather than
     silently consuming a stale exclusion matrix.
     """
     validate_m1_layer(adata)
     if "M2" not in adata.layers:
         raise KeyError(
-            "adata.layers['M2'] is required; call splikit.tl.make_m2(adata) first"
+            "adata.layers['M2'] is required; call scsplice.tl.make_m2(adata) first"
         )
     M1, M2 = adata.layers["M1"], adata.layers["M2"]
     if not sp.issparse(M2):
@@ -81,12 +138,12 @@ def validate_paired_layers(adata: ad.AnnData, *, require_m2_valid: bool = True) 
             f"layers['M2'] must be float64 (matches R double), got {M2.dtype}"
         )
     if require_m2_valid:
-        ns = adata.uns.get("splikit", {})
+        ns = get_scsplice_ns(adata)
         if not ns.get("m2_valid", False):
             raise RuntimeError(
-                "M2 is stale (uns['splikit']['m2_valid'] is False). "
+                "M2 is stale (uns['scsplice']['m2_valid'] is False). "
                 "Any operation that mutated layers['M1'] or subsetted the var "
-                "axis invalidates M2. Call splikit.tl.make_m2(adata) again."
+                "axis invalidates M2. Call scsplice.tl.make_m2(adata) again."
             )
 
 
@@ -118,16 +175,16 @@ def validate_var_schema(adata: ad.AnnData) -> None:
 
 
 def mark_m2_valid(adata: ad.AnnData) -> None:
-    """Set ``uns['splikit']['m2_valid'] = True``. Called by ``splk.tl.make_m2``."""
-    ns = adata.uns.setdefault("splikit", {})
+    """Set ``uns['scsplice']['m2_valid'] = True``. Called by ``scs.tl.make_m2``."""
+    ns = setdefault_scsplice_ns(adata)
     ns["m2_valid"] = True
 
 
 def invalidate_m2(adata: ad.AnnData) -> None:
-    """Set ``uns['splikit']['m2_valid'] = False``.
+    """Set ``uns['scsplice']['m2_valid'] = False``.
 
     Call this from any operation that mutates ``layers['M1']`` or subsets the var
     axis — both invalidate the LJV co-membership relationship between M1 and M2.
     """
-    ns = adata.uns.setdefault("splikit", {})
+    ns = setdefault_scsplice_ns(adata)
     ns["m2_valid"] = False

@@ -32,9 +32,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from splikit.io._starsolo import _safe_mmread  # shared mmread guard
-from splikit.io._starsolo_gene import _read_features
-from splikit.io._whitelist import (
+from scsplice.io._starsolo import _safe_mmread  # shared mmread guard
+from scsplice.io._starsolo_gene import _read_features
+from scsplice.io._whitelist import (
     ResolvedWhitelist,
     normalize_per_sample_arg,
     resolve_whitelist,
@@ -157,7 +157,7 @@ def _read_one_velocyto_sample(
     if verbose:
         wf = "split" if paths.spliced is not None else "stacked"
         print(
-            f"[splikit.io] Reading Velocyto sample {sample_id!r} from "
+            f"[scsplice.io] Reading Velocyto sample {sample_id!r} from "
             f"{paths.source_dir} (wire_format={wf})"
         )
 
@@ -476,7 +476,10 @@ def read_starsolo_velocyto(
     )
     # Record per-sample wire-format detection.
     wire_formats = {sid: art.wire_format for sid, art in zip(sample_ids, artifacts, strict=True)}
-    adata.uns["splikit"] = {
+    # Use the canonical scsplice namespace key. Legacy h5ad files written by
+    # splikit-py 1.0.0 carry uns['splikit']; validators downstream transparently
+    # migrate that via scsplice._core._validators.get_scsplice_ns.
+    adata.uns["scsplice"] = {
         "version": 1,
         "source": "starsolo",
         "params": {
@@ -506,7 +509,7 @@ def read_starsolo_velocyto(
 
     if verbose:
         print(
-            f"[splikit.io] Built Velocyto AnnData: {adata.n_obs} cells × "
+            f"[scsplice.io] Built Velocyto AnnData: {adata.n_obs} cells × "
             f"{adata.n_vars} genes (spliced nnz={adata.layers['spliced'].nnz}, "
             f"unspliced nnz={adata.layers['unspliced'].nnz}, "
             f"ambiguous nnz={adata.layers['ambiguous'].nnz})"
