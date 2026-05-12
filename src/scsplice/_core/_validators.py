@@ -45,7 +45,7 @@ def get_scsplice_ns(adata: ad.AnnData) -> dict:
     if _LEGACY_UNS_KEY in adata.uns:
         warnings.warn(
             "AnnData uses legacy uns['splikit'] key; this will be removed in "
-            "scsplice 2.0. Migrate with: "
+            "scsplice 3.0. Migrate with: "
             "adata.uns['scsplice'] = adata.uns.pop('splikit')",
             FutureWarning,
             stacklevel=2,
@@ -68,7 +68,7 @@ def setdefault_scsplice_ns(adata: ad.AnnData) -> dict:
     if _LEGACY_UNS_KEY in adata.uns:
         warnings.warn(
             "AnnData uses legacy uns['splikit'] key; this will be removed in "
-            "scsplice 2.0. Migrate with: "
+            "scsplice 3.0. Migrate with: "
             "adata.uns['scsplice'] = adata.uns.pop('splikit')",
             FutureWarning,
             stacklevel=2,
