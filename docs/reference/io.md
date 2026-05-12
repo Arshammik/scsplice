@@ -1,4 +1,4 @@
-# splikit.io
+# scsplice.io
 
 Input / output functions for STARsolo output. Three readers, one consistent API shape:
 
@@ -14,7 +14,7 @@ See [STARsolo readers and AnnData data layouts](../explanation/io-readers-and-da
 
 ---
 
-::: splikit.io
+::: scsplice.io
     options:
       show_root_heading: true
       show_root_full_path: false

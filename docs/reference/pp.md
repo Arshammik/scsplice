@@ -1,8 +1,8 @@
-# splikit.pp
+# scsplice.pp
 
 Preprocessing functions. Event-level filters and selection methods applied before dimensionality reduction.
 
-::: splikit.pp
+::: scsplice.pp
     options:
       show_root_heading: true
       show_root_full_path: false

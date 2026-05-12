@@ -68,7 +68,7 @@ The `_S` and `_E` group-ID spaces are **disjoint** — a junction's start-group 
 
 ## `m2_valid` sentinel
 
-`adata.uns["splikit"]["m2_valid"]` tracks whether M2 is consistent with the current state of M1 and `group_id`:
+`adata.uns["scsplice"]["m2_valid"]` tracks whether M2 is consistent with the current state of M1 and `group_id`:
 
 - Set to `False` by `read_starsolo` (M2 has not been computed yet).
 - Set to `False` automatically when the var axis is subsetted (because M2 values are stale after group membership changes).
@@ -76,13 +76,22 @@ The `_S` and `_E` group-ID spaces are **disjoint** — a junction's start-group 
 
 Functions that require valid M2 (`highly_variable_events`, `pseudo_correlation`) check this flag and raise a `ValueError` rather than silently producing wrong results.
 
+!!! note "Legacy `uns[\"splikit\"]` key (v1.0 compat shim)"
+    AnnData objects created with `splikit-py` v1.0 carry `uns["splikit"]` instead of
+    `uns["scsplice"]`. In scsplice v2.0, the `get_scsplice_ns()` and
+    `setdefault_scsplice_ns()` helpers in `scsplice._core._validators` read the
+    legacy key with a `FutureWarning` and migrate the value to `uns["scsplice"]`
+    automatically on first access. The legacy `uns["splikit"]` key will be removed
+    in v3.0. Re-save your AnnData after the first scsplice v2.0 call to persist the
+    migrated key.
+
 ## Why `ljv_kind="start_end"` is the default
 
 In typical scRNA-seq data, alternative splicing at both 5' and 3' ends is biologically meaningful. Using `ljv_kind="start_end"` (the default) captures both and matches the R splikit default. The `"start"` and `"end"` modes are provided for users who want to analyse only one class of alternative sites — for example, to reduce the event count in experiments where memory or compute is constrained.
 
 ## AnnData layout conventions
 
-splikit-py follows the standard AnnData layout:
+scsplice follows the standard AnnData layout:
 
 - **Rows (`obs`) = cells.** All count matrices in `layers` are cells × events.
 - **Columns (`var`) = events** (splice junctions after LJV expansion).

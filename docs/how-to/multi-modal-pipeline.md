@@ -16,27 +16,27 @@ The three readers share an identical call shape. Running them on the same
 convention (`<barcode>-<sample_id>`):
 
 ```python
-import splikit as splk
+import scsplice as scs
 
 sample_dirs = ["sample1", "sample2", "sample3"]
 sample_ids  = ["s1",      "s2",      "s3"]
 
 # Splicing (M1 + M2 in layers; X = None)
-spl = splk.io.read_starsolo(
+spl = scs.io.read_starsolo(
     sj_dirs=[f"{d}/Solo.out/SJ" for d in sample_dirs],
     sample_ids=sample_ids,
     verbose=True,
 )
 
 # Gene expression (raw counts in X)
-gex = splk.io.read_starsolo_gene(
+gex = scs.io.read_starsolo_gene(
     sample_dirs=sample_dirs,
     sample_ids=sample_ids,
     var_names="gene_ids",
 )
 
 # RNA velocity (spliced / unspliced / ambiguous in layers; X = spliced)
-vel = splk.io.read_starsolo_velocyto(
+vel = scs.io.read_starsolo_velocyto(
     sample_dirs=sample_dirs,
     sample_ids=sample_ids,
 )
@@ -57,12 +57,12 @@ Run the splicing pipeline before aligning cells — HVE selection may further
 reduce the cell set if you filter on `min_row_sum`:
 
 ```python
-splk.tl.make_m2(spl, n_threads=8)
-splk.pp.highly_variable_events(spl, min_row_sum=50, n_top=10_000,
-                                sample_key="sample_id")
+scs.tl.make_m2(spl, n_threads=8)
+scs.pp.highly_variable_events(spl, min_row_sum=50, n_top=10_000,
+                               sample_key="sample_id")
 spl_hve = spl[:, spl.var["highly_variable"]].copy()
 # M2 is invalidated by var-axis subsetting; rebuild.
-splk.tl.make_m2(spl_hve, n_threads=8)
+scs.tl.make_m2(spl_hve, n_threads=8)
 ```
 
 ---
@@ -159,7 +159,7 @@ downstream tools (`batch_key="sample_id"` in `scanpy.pp.highly_variable_genes`,
 `sc.pp.combat`, `scvi.model.SCVI`, etc.).
 
 **M2 validity after var-axis subsetting.** If you subset the splicing AnnData
-on the var axis (e.g. `spl[:, mask]`), `adata.uns["splikit"]["m2_valid"]`
-flips to `False`. Always call `splk.tl.make_m2` again on the subsetted object
+on the var axis (e.g. `spl[:, mask]`), `adata.uns["scsplice"]["m2_valid"]`
+flips to `False`. Always call `scs.tl.make_m2` again on the subsetted object
 before passing M2 downstream. See
 [Recompute M2 after subsetting](recompute-m2-after-subsetting.md) for details.

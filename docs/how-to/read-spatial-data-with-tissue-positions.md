@@ -12,9 +12,9 @@ For the design rationale behind the whitelist precedence rule see
 ## 1. Read a single Visium sample
 
 ```python
-import splikit as splk
+import scsplice as scs
 
-gex = splk.io.read_starsolo_gene(
+gex = scs.io.read_starsolo_gene(
     sample_dirs=["path/to/visium_sample"],      # (1)
     sample_ids=["vis1"],
     tissue_positions=[
@@ -79,7 +79,7 @@ When some samples have `tissue_positions` and others do not, pass `None` for
 the non-spatial slots:
 
 ```python
-gex = splk.io.read_starsolo_gene(
+gex = scs.io.read_starsolo_gene(
     sample_dirs=["visium_sample", "dropseq_sample"],
     sample_ids=["vis1", "ds1"],
     tissue_positions=[
@@ -109,13 +109,13 @@ The same `tissue_positions=` and `spatial_library_ids=` kwargs work identically
 on `read_starsolo` (splicing) and `read_starsolo_velocyto`:
 
 ```python
-spl = splk.io.read_starsolo(
+spl = scs.io.read_starsolo(
     sj_dirs=["visium_sample/Solo.out/SJ"],
     sample_ids=["vis1"],
     tissue_positions=["visium_sample/outs/tissue_positions.csv"],
     spatial_library_ids=["vis1"],
 )
-vel = splk.io.read_starsolo_velocyto(
+vel = scs.io.read_starsolo_velocyto(
     sample_dirs=["visium_sample"],
     sample_ids=["vis1"],
     tissue_positions=["visium_sample/outs/tissue_positions.csv"],

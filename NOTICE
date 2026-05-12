@@ -5,9 +5,9 @@ This software contains code ported from the R package splikit
 and Statistical Genomics Laboratory, McGill University.
 
 Ported components (from splikit/src/):
-  - make_m2_cpp.cpp   → src/_splikit_cpp/make_m2.cpp
-  - calcDeviances.cpp → src/_splikit_cpp/deviance.cpp
-  - cpp_pseudoR2.cpp  → src/_splikit_cpp/pseudo_r2.cpp
+  - make_m2_cpp.cpp   → src/_scsplice_cpp/make_m2.cpp
+  - calcDeviances.cpp → src/_scsplice_cpp/deviance.cpp
+  - cpp_pseudoR2.cpp  → src/_scsplice_cpp/pseudo_r2.cpp
 
 The R splikit package is licensed under the MIT License.
 For details, see https://github.com/csglab/splikit/blob/main/LICENSE.

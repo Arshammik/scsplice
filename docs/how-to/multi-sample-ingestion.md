@@ -5,9 +5,9 @@
 ## Basic usage
 
 ```python
-import splikit as splk
+import scsplice as scs
 
-adata = splk.io.read_starsolo(
+adata = scs.io.read_starsolo(
     sj_dirs=[
         "run1/Solo.out/SJ",
         "run2/Solo.out/SJ",
@@ -38,7 +38,7 @@ It locates `SJ.out.tab` two levels above the `raw/` directory (i.e. at `Solo.out
 By default (`use_internal_whitelist=True`), each sample's barcode list is filtered using STARsolo's own `Gene/filtered/barcodes.tsv`. Pass explicit per-sample whitelists to override:
 
 ```python
-adata = splk.io.read_starsolo(
+adata = scs.io.read_starsolo(
     sj_dirs=["run1/Solo.out/SJ", "run2/Solo.out/SJ"],
     sample_ids=["s1", "s2"],
     barcode_whitelists=[

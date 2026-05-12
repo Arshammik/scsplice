@@ -31,7 +31,7 @@ jobs:
           # both. manylinux_2_28 is selected in pyproject.toml.
           CIBW_BEFORE_ALL_LINUX: "dnf install -y epel-release && dnf install -y eigen3-devel"
           # macOS: install eigen only. libomp is intentionally NOT installed
-          # because we disable OpenMP on macOS (SPLIKIT_DISABLE_OPENMP=ON in
+          # because we disable OpenMP on macOS (SCSPLICE_DISABLE_OPENMP=ON in
           # pyproject.toml [tool.cibuildwheel.macos]) — libomp discovery
           # across x86_64/arm64 under cibuildwheel is too fragile and per-row
           # writes are bit-identical to MT anyway.

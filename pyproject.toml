@@ -53,11 +53,11 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://arshammik.github.io/splikitpy/"
-Homepage = "https://github.com/Arshammik/splikitpy"
-Issues = "https://github.com/Arshammik/splikitpy/issues"
-Changelog = "https://github.com/Arshammik/splikitpy/blob/main/CHANGELOG.md"
-Source = "https://github.com/Arshammik/splikitpy"
+Documentation = "https://arshammik.github.io/scsplice/"
+Homepage = "https://github.com/Arshammik/scsplice"
+Issues = "https://github.com/Arshammik/scsplice/issues"
+Changelog = "https://github.com/Arshammik/scsplice/blob/main/CHANGELOG.md"
+Source = "https://github.com/Arshammik/scsplice"
 
 [tool.scikit-build]
 wheel.packages = ["src/scsplice"]

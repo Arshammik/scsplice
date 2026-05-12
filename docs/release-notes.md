@@ -1,31 +1,91 @@
 # Release notes
 
-## v0.1.0.dev0 (in development)
+## v2.0.0 (2026-05-11) — package renamed scsplice
 
-Initial pre-alpha development release. Not yet published to PyPI.
+**Breaking change:** The PyPI distribution name changes from `splikit-py` to `scsplice`.
+The canonical import alias is now `scs` (parallels `sc` / `scv` / `sq`).
 
-**Scope:** six public functions across `io`, `tl`, and `pp`.
+```bash
+# Before (splikit-py)
+pip install splikit-py
+import splikit as splk
 
-**Cross-language parity:** M2 bit-exact vs. R splikit; HVE deviance `rtol=1e-10`; pseudo-correlation `rtol=1e-7`. The full regression suite lives on the [`validation` branch](https://github.com/Arshammik/splikitpy/tree/validation).
+# After (scsplice)
+pip install scsplice
+import scsplice as scs
+```
 
-### New in commit `4a32cc2` (on `main`)
+### Migration guide
 
-**`read_starsolo_gene`** (`src/splikit/io/_starsolo_gene.py`)
+| v1.0 (splikit-py) | v2.0 (scsplice) |
+|---|---|
+| `import splikit as splk` | `import scsplice as scs` |
+| `splk.io.read_starsolo(...)` | `scs.io.read_starsolo(...)` |
+| `splk.tl.make_m2(adata)` | `scs.tl.make_m2(adata)` |
+| `splk.pp.highly_variable_events(adata)` | `scs.pp.highly_variable_events(adata)` |
+| `splk.tl.pseudo_correlation(adata, Z)` | `scs.tl.pseudo_correlation(adata, Z)` |
+| `adata.uns["splikit"]` | `adata.uns["scsplice"]` |
+| `pip install splikit-py` | `pip install scsplice` |
+| `SPLIKIT_REAL_DATA_DIR` env var | `SCSPLICE_REAL_DATA_DIR` env var |
 
-Reads `Solo.out/Gene/{raw,filtered}/` into a cell × gene AnnData with raw UMI counts in `X`. Drop-in for `scanpy.pp.normalize_total`, `scanpy.pp.highly_variable_genes`, and `scvi-tools`. Supports `tissue_positions=` for spatial samples with full squidpy `obsm["spatial"]` and `uns["spatial"]` population.
+### `uns["splikit"]` compatibility shim
 
-**`read_starsolo_velocyto`** (`src/splikit/io/_starsolo_velocyto.py`)
+AnnData objects created with v1.0 carry `uns["splikit"]`. In v2.0, the canonical
+key is `uns["scsplice"]`. The shim in `scsplice._core._validators.get_scsplice_ns()`
+and `setdefault_scsplice_ns()` reads from `uns["splikit"]` with a `FutureWarning`
+and migrates the value to `uns["scsplice"]` automatically. The legacy key will be
+removed in v3.0.
 
-Reads `Solo.out/Velocyto/raw/` into a cell × gene AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`. `X` is aliased to `layers["spliced"]` for scvelo drop-in. Handles both modern split-file layout (STARsolo 2.7.10b+: three sibling `.mtx` files) and legacy stacked `matrix.mtx` automatically.
+To migrate an existing AnnData object explicitly:
 
-**External whitelist / spatial whitelist refactor** (`src/splikit/io/_whitelist.py`)
+```python
+import scsplice as scs
+import warnings
 
-Centralised per-sample whitelist resolution shared by all three readers. Strict four-level precedence: `tissue_positions > explicit barcode_whitelist > internal filtered/ > raw`. When `tissue_positions=` is given, the reader sources from `raw/` (not `filtered/`) and trims to the spatial spot set — necessary because Visium whitelists are derived from the spot grid, not the STARsolo knee-point algorithm.
+# Load an old AnnData (will emit FutureWarning on first scsplice call)
+with warnings.catch_warnings(record=True):
+    scs.tl.make_m2(adata)  # shim fires, migrates uns key
 
-All readers gained `tissue_positions=` and `spatial_library_ids=` kwargs with identical semantics. When `tissue_positions` is provided, the reader populates squidpy-compatible: `obs["in_tissue"]` (int8), `obs["array_row"]` / `obs["array_col"]` (int32), `obsm["spatial"]` ((n_obs, 2) float64), and `uns["spatial"][library_id]`. Space Ranger v1 (no-header `tissue_positions_list.csv`) and v2 (header `tissue_positions.csv`) are auto-detected.
+# adata.uns["scsplice"] is now populated; adata.uns["splikit"] is removed
+```
 
-For the full commit history, see the [GitHub repository](https://github.com/Arshammik/splikitpy/commits/main).
+### `SCSPLICE_REAL_DATA_DIR` env var
+
+The `SPLIKIT_REAL_DATA_DIR` environment variable used by the test suite is
+renamed to `SCSPLICE_REAL_DATA_DIR`. The old name is still accepted with a
+`FutureWarning` for one release cycle; update your shell config.
 
 ---
 
-Formal versioned release notes will be published here starting with v1.0.
+## v1.0.0 (2026-05-11)
+
+Initial PyPI release as `splikit-py`.
+
+**Scope:** six public functions across `io`, `tl`, and `pp`.
+
+**Cross-language parity:** M2 bit-exact vs. R splikit; HVE deviance `rtol=1e-10`; pseudo-correlation `rtol=1e-7`. The full regression suite lives on the [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation).
+
+### New in v1.0.0
+
+**`scs.io.read_starsolo`** — Ingest STARsolo `Solo.out/SJ/` for one or more samples into a single AnnData with M1 (inclusion counts) in `layers["M1"]` and LJV grouping in `var["group_id"]`. Supports spatial data via optional `tissue_positions=` parameter.
+
+**`scs.io.read_starsolo_gene`** — Ingest `Solo.out/Gene/` gene-expression counts into a standard cell × gene AnnData with raw UMI counts in `X`. Drop-in for `scanpy.pp.normalize_total`, `scanpy.pp.highly_variable_genes`, and `scvi-tools`. Supports `tissue_positions=` for spatial samples with full squidpy `obsm["spatial"]` and `uns["spatial"]` population.
+
+**`scs.io.read_starsolo_velocyto`** — Ingest `Solo.out/Velocyto/` spliced/unspliced/ambiguous layers into an AnnData compatible with `scvelo`. Handles both modern (split-file) and legacy (stacked `matrix.mtx`) STARsolo wire formats.
+
+**`scs.tl.make_m2`** — Build the exclusion matrix M2 from M1 and LJV grouping via C++ kernel with optional OpenMP parallelism. Output is bit-exact with R splikit.
+
+**`scs.tl.pseudo_correlation`** — Per-event signed pseudo-R² (Cox-Snell or Nagelkerke) against an external predictor matrix via iteratively reweighted least squares (IRLS).
+
+**`scs.pp.highly_variable_events`** — Select highly variable splicing events per library using binomial-deviance scoring.
+
+**`scsplice.settings`** — Global settings object for configurable behavior (verbosity, I/O defaults).
+
+MkDocs Material documentation site with tutorials, how-to guides, API reference, and conceptual explanations.
+
+### Known limitations
+
+- `scs.pl` (plotting) is a v2.1 placeholder. Use `scanpy.pl`, `scvelo.pl`, and `squidpy` for downstream visualization.
+- HVG (highly variable genes) and silhouette metrics are intentionally not ported — compose with `scanpy.pp.highly_variable_genes` and `sklearn.metrics.silhouette_score` instead.
+- GTF annotation and gene-level plotting are out of scope; use `pyranges` for GTF operations.
+- R-equivalence validation suite (cross-language regression tests, R fixtures, tolerance bands) lives on the [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation), not main.

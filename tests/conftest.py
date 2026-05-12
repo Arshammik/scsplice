@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from pathlib import Path
 
 import anndata as ad
@@ -14,8 +15,21 @@ import scipy.sparse as sp
 
 # Real-data sandbox path; tests gated by @pytest.mark.real_data are
 # auto-skipped when the path does not exist. Override with the env var
-# ``SPLIKIT_REAL_DATA_DIR`` to point to a real STARsolo output directory.
-_REAL_DATA_DIR_STR = os.environ.get("SPLIKIT_REAL_DATA_DIR")
+# ``SCSPLICE_REAL_DATA_DIR`` to point to a real STARsolo output directory.
+# The legacy name ``SPLIKIT_REAL_DATA_DIR`` is still accepted with a
+# FutureWarning for one release cycle; update your shell config.
+_REAL_DATA_DIR_STR = os.environ.get("SCSPLICE_REAL_DATA_DIR")
+if _REAL_DATA_DIR_STR is None:
+    _legacy = os.environ.get("SPLIKIT_REAL_DATA_DIR")
+    if _legacy is not None:
+        warnings.warn(
+            "SPLIKIT_REAL_DATA_DIR is deprecated; use SCSPLICE_REAL_DATA_DIR instead. "
+            "The old env var will be ignored in a future release.",
+            FutureWarning,
+            stacklevel=1,
+        )
+        _REAL_DATA_DIR_STR = _legacy
+
 _REAL_DATA_DIR = Path(_REAL_DATA_DIR_STR) if _REAL_DATA_DIR_STR else None
 _REAL_DATA_SAMPLES = (
     "L8TX_181211_01_A01_S01_L003",
@@ -27,7 +41,7 @@ _REAL_DATA_SAMPLES = (
 def real_data_dir() -> Path:
     if _REAL_DATA_DIR is None or not _REAL_DATA_DIR.is_dir():
         pytest.skip(
-            f"Real-data sandbox not found; set SPLIKIT_REAL_DATA_DIR env var "
+            f"Real-data sandbox not found; set SCSPLICE_REAL_DATA_DIR env var "
             "to enable @pytest.mark.real_data tests."
         )
     return _REAL_DATA_DIR

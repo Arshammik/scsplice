@@ -1,9 +1,9 @@
-site_name: splikit-py
+site_name: scsplice
 site_description: Single-cell alternative-splicing analysis for the scverse ecosystem
 site_author: Arsham Mikaeili Namini
-site_url: https://arshammik.github.io/splikitpy/
-repo_url: https://github.com/Arshammik/splikitpy
-repo_name: Arshammik/splikitpy
+site_url: https://arshammik.github.io/scsplice/
+repo_url: https://github.com/Arshammik/scsplice
+repo_name: Arshammik/scsplice
 copyright: Copyright &copy; 2026 Arsham Mikaeili Namini
 
 docs_dir: docs
@@ -133,4 +133,4 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/Arshammik/splikitpy
+      link: https://github.com/Arshammik/scsplice

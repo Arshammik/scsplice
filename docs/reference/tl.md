@@ -1,8 +1,8 @@
-# splikit.tl
+# scsplice.tl
 
-Tools that operate on a populated splicing AnnData. Both functions require `layers["M1"]` to be present; `pseudo_correlation` additionally requires valid M2 (`uns["splikit"]["m2_valid"] == True`).
+Tools that operate on a populated splicing AnnData. Both functions require `layers["M1"]` to be present; `pseudo_correlation` additionally requires valid M2 (`uns["scsplice"]["m2_valid"] == True`).
 
-::: splikit.tl
+::: scsplice.tl
     options:
       show_root_heading: true
       show_root_full_path: false
