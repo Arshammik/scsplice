@@ -5,9 +5,7 @@
 [![License: MIT](https://img.shields.io/pypi/l/scsplice.svg)](https://github.com/Arshammik/scsplice/blob/main/LICENSE)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/test.yml?branch=main&label=tests&logo=github)](https://github.com/Arshammik/scsplice/actions/workflows/test.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/docs.yml?branch=main&label=docs&logo=materialformkdocs&logoColor=white)](https://arshammik.github.io/scsplice/)
-[![Downloads](https://img.shields.io/pypi/dm/scsplice.svg)](https://pypi.org/project/scsplice/)
-[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![scverse ecosystem](https://img.shields.io/badge/ecosystem-scverse-1f2c4c)](https://scverse.org)
+
 
 Single-cell alternative-splicing analysis for the [scverse](https://scverse.org) ecosystem.
 
