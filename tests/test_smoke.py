@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
+
+EXPECTED_VERSION = "2.0.1"
+
 
 def test_package_imports():
     import scsplice
 
     assert hasattr(scsplice, "__version__")
     assert isinstance(scsplice.__version__, str)
+    assert scsplice.__version__ == EXPECTED_VERSION
+    assert version("scsplice") == EXPECTED_VERSION
 
 
 def test_namespaces_present():

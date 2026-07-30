@@ -13,12 +13,14 @@ Single-cell alternative-splicing analysis for the [scverse](https://scverse.org)
 
 ## Status
 
-v1.0. v1.0 scope is intentionally narrow:
+v2.0.1 keeps a deliberately focused API:
 
 - `scs.io.read_starsolo` — ingest STARsolo `Solo.out/SJ/` for one or more samples.
 - `scs.tl.make_m2` — build the exclusion matrix from M1 + LJV grouping.
 - `scs.pp.highly_variable_events` — per-library binomial-deviance HVE selection.
-- `scs.tl.pseudo_correlation` — beta-binomial Cox-Snell / Nagelkerke pseudo-R² against an external matrix.
+- `scs.io.read_starsolo_gene` — read raw or filtered gene counts, including STARsolo EM matrices.
+- `scs.tl.pseudo_correlation` — beta-binomial Cox-Snell / Nagelkerke pseudo-R² with event-wise permutation inference.
+- `scs.tl.get_pseudo_correlation_result` — materialize export-ready statistics and long null tables.
 
 HVG, plotting, and silhouette utilities from the R package are intentionally omitted — `scanpy`, `pyranges`, and `sklearn` already cover those.
 
@@ -81,6 +83,7 @@ edits take effect immediately.
 ## Quick start
 
 ```python
+import numpy as np
 import scsplice as scs
 import scanpy as sc
 
@@ -96,9 +99,23 @@ scs.tl.make_m2(adata, n_threads=8)
 # (3) Identify highly variable events per library using binomial deviance
 scs.pp.highly_variable_events(adata, min_row_sum=50, n_threads=8)
 
+# (4) Compute pseudo-correlation with the 100-permutation default
+# zdb must be events × cells and aligned to adata.var_names / adata.obs_names
+zdb = np.random.default_rng(42).normal(size=(adata.n_vars, adata.n_obs))
+scs.tl.pseudo_correlation(adata, zdb, seed=42, n_threads=8)
+result = scs.tl.get_pseudo_correlation_result(adata)
+result.statistics.to_csv("pseudo_correlation_statistics.csv", index=False)
+result.null_distribution.to_csv("pseudo_correlation_null.csv", index=False)
+
 # Optional: compose with scanpy on the splicing embedding
 # (PCA / neighbors / leiden over logit(M1 / (M1 + M2)))
 ```
+
+Gene-expression ingestion defaults to raw STARsolo counts, preferring
+`UniqueAndMult-EM.mtx` and falling back to `matrix.mtx`, then independently
+applies the internal filtered-barcode whitelist. Use
+`matrix_source="filtered"` to read the filtered matrix directly or
+`matrix_source="auto"` for the scsplice 2.0.0 source-selection behavior.
 
 ## Numerical equivalence
 

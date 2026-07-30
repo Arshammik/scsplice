@@ -4,7 +4,7 @@ A single :class:`_Settings` instance is exposed as :data:`scsplice.settings`.
 Attributes can be set directly to control package behaviour without passing
 per-call keyword arguments.
 
-The settings are intentionally minimal in v1.0; per-call ``verbose`` and
+The settings are intentionally minimal; per-call ``verbose`` and
 ``n_threads`` arguments still work and override the defaults below.
 """
 

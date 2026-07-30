@@ -135,7 +135,34 @@ print(f"{hve.sum()} events selected out of {len(hve)}")
 print(adata.var[["sum_deviance", "highly_variable"]].head())
 ```
 
-### 5. Compose with scanpy
+### 5. Compute pseudo-correlation and export the null result
+
+`pseudo_correlation` expects one predictor per event and cell. It stores the
+observed values and event-wise inference directly in AnnData and runs 100
+permutations by default:
+
+```python
+zdb = np.random.default_rng(42).normal(size=(adata.n_vars, adata.n_obs))
+scs.tl.pseudo_correlation(adata, zdb, seed=42, n_threads=1)
+
+print(adata.var[[
+    "pseudo_correlation",
+    "pseudo_correlation_null_mean",
+    "pseudo_correlation_emp_pvalue",
+    "pseudo_correlation_emp_padj",
+]].head())
+
+result = scs.tl.get_pseudo_correlation_result(adata)
+result.statistics.to_csv("pseudo_correlation_statistics.csv", index=False)
+result.null_distribution.to_csv("pseudo_correlation_null.csv", index=False)
+```
+
+The long null table is generated on demand instead of duplicated in the
+AnnData file. Its pooled values are descriptive; each empirical p-value is
+calculated from that event's own permutation draws. Use `n_permutations=0`
+when only the observed pseudo-correlation is required.
+
+### 6. Compose with scanpy
 
 Once you have M1 and M2, you can compute the logit-PSI representation and pass it to `scanpy` for dimensionality reduction and clustering:
 
@@ -167,6 +194,8 @@ gex = scs.io.read_starsolo_gene(
     sample_dirs=["sample1", "sample2"],
     sample_ids=["s1", "s2"],
     var_names="gene_ids",       # default; Ensembl IDs as var_names
+    matrix_source="raw",        # default; independent from barcode filtering
+    matrix_file="auto",         # EM counts first, then matrix.mtx
     verbose=True,
 )
 # Ready for: sc.pp.normalize_total(gex), sc.pp.highly_variable_genes(gex)
@@ -178,6 +207,13 @@ vel = scs.io.read_starsolo_velocyto(
 )
 # Ready for: scv.pp.filter_and_normalize(vel), scv.tl.velocity(vel)
 ```
+
+By default the gene reader selects `raw/UniqueAndMult-EM.mtx` when available,
+falls back to `raw/matrix.mtx`, and then retains the barcodes listed in
+`filtered/barcodes.tsv`. Set `matrix_source="filtered"` to read the filtered
+matrix directly, or set `use_internal_whitelist=False` to retain every barcode
+from the selected matrix. Raw matrices can be much larger in memory; choose
+`matrix_source="filtered"` when EM counts are unnecessary.
 
 Because all three readers use the same `(sample_dirs, sample_ids)` inputs and produce `<barcode>-<sample_id>` `obs_names`, aligning modalities is a simple intersection:
 

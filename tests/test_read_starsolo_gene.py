@@ -13,7 +13,8 @@ Real-data tests cross-check against scanpy.read_mtx on the same MTX files.
 
 from __future__ import annotations
 
-import warnings
+import gzip
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -38,6 +39,7 @@ def _make_starsolo_gene_dir(
     counts: np.ndarray,  # (n_genes, n_cells)
     feature_type_col: bool = True,
     filtered_subset: list[str] | None = None,
+    em_counts: np.ndarray | None = None,
 ) -> Path:
     """Build a minimal Solo.out/Gene/{raw,filtered}/ tree.
 
@@ -73,6 +75,9 @@ def _make_starsolo_gene_dir(
     (filt / "barcodes.tsv").write_text("\n".join(filtered_subset) + "\n")
 
     _write_mtx(raw / "matrix.mtx", counts)
+    if em_counts is not None:
+        assert em_counts.shape == counts.shape
+        _write_mtx(raw / "UniqueAndMult-EM.mtx", em_counts)
     if keep_idx:
         _write_mtx(filt / "matrix.mtx", counts[:, keep_idx])
     else:
@@ -86,6 +91,7 @@ def _make_starsolo_gene_dir(
 # Synthetic tests (always run)
 # -----------------------------
 
+
 def test_read_starsolo_gene_single_sample_smoke(tmp_path):
     import scsplice  # noqa: PLC0415
 
@@ -95,13 +101,15 @@ def test_read_starsolo_gene_single_sample_smoke(tmp_path):
     counts = np.arange(40, dtype=np.int64).reshape(5, 8)
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=gene_ids, gene_names=gene_names,
-        barcodes=barcodes, counts=counts,
+        gene_ids=gene_ids,
+        gene_names=gene_names,
+        barcodes=barcodes,
+        counts=counts,
         filtered_subset=barcodes,  # filtered = raw, simplifies expected counts
     )
 
     a = scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
-    # filtered/ is the source by default → 8 cells, 5 genes.
+    # raw/ is the source by default and the internal whitelist retains all cells.
     assert a.n_obs == 8
     assert a.n_vars == 5
     assert a.X.dtype == np.float64
@@ -154,7 +162,9 @@ def test_read_starsolo_gene_var_names_symbols_with_collision(tmp_path):
         filtered_subset=["BC1", "BC2"],
     )
     a = scsplice.io.read_starsolo_gene(
-        tmp_path / "s1", "s1", var_names="gene_symbols",
+        tmp_path / "s1",
+        "s1",
+        var_names="gene_symbols",
     )
     # var_names must be unique post make_unique.
     assert a.var_names.is_unique
@@ -183,7 +193,8 @@ def test_read_starsolo_gene_multi_sample_disjoint_genes(tmp_path):
         filtered_subset=["BC_C"],
     )
     a = scsplice.io.read_starsolo_gene(
-        [tmp_path / "s1", tmp_path / "s2"], ["s1", "s2"],
+        [tmp_path / "s1", tmp_path / "s2"],
+        ["s1", "s2"],
     )
     assert a.n_obs == 3
     assert a.n_vars == 4  # union: G1, G2, G3, G4
@@ -208,42 +219,118 @@ def test_read_starsolo_gene_explicit_whitelist_trims_raw(tmp_path):
     raw_barcodes = ["BC0", "BC1", "BC2", "BC3", "BC4"]
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1", "G2"], gene_names=["a", "b"],
+        gene_ids=["G1", "G2"],
+        gene_names=["a", "b"],
         barcodes=raw_barcodes,
         counts=np.tile(np.arange(5, dtype=np.int64), (2, 1)) + 1,
         filtered_subset=["BC0", "BC1"],  # internal WL would give 2 cells
     )
     # Whitelist captures cells outside filtered/ (BC3, BC4) — proves raw/ source.
     a = scsplice.io.read_starsolo_gene(
-        tmp_path / "s1", "s1",
+        tmp_path / "s1",
+        "s1",
         barcode_whitelists=[["BC1", "BC3", "BC4"]],
     )
     assert a.n_obs == 3
     assert sorted(n.split("-")[0] for n in a.obs_names) == ["BC1", "BC3", "BC4"]
 
 
-def test_read_starsolo_gene_use_internal_false_no_whitelist(tmp_path):
-    """use_internal_whitelist=False with no whitelist falls back to raw/ unfiltered."""
+def test_read_starsolo_gene_default_prefers_em_and_filters_raw(tmp_path):
+    """Defaults prefer raw EM counts, then apply the internal barcode list."""
+    import scsplice  # noqa: PLC0415
+
+    raw_barcodes = [f"BC{i}" for i in range(4)]
+    standard = np.array([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=np.int64)
+    em = standard + 100
+    _make_starsolo_gene_dir(
+        tmp_path / "s1",
+        gene_ids=["G1", "G2"],
+        gene_names=["a", "b"],
+        barcodes=raw_barcodes,
+        counts=standard,
+        filtered_subset=["BC0", "BC2"],
+        em_counts=em,
+    )
+    a = scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
+    assert a.n_obs == 2
+    assert np.array_equal(np.asarray(a.X.todense()), em[:, [0, 2]].T)
+    params = a.uns["scsplice"]["params"]["read_starsolo_gene"]
+    assert params["matrix_source"] == "raw"
+    assert params["matrix_file"] == "auto"
+    assert params["resolved_matrix_sources"] == ["raw"]
+    assert params["resolved_matrix_files"] == ["UniqueAndMult-EM.mtx"]
+
+
+def test_read_starsolo_gene_source_file_controls_and_auto_compat(tmp_path):
+    """Source choice is independent and auto retains the 2.0.0 behavior."""
     import scsplice  # noqa: PLC0415
 
     raw_barcodes = [f"BC{i}" for i in range(5)]
-    _make_starsolo_gene_dir(
+    counts = np.arange(10, dtype=np.int64).reshape(2, 5)
+    root = _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1"], gene_names=["a"],
+        gene_ids=["G1", "G2"],
+        gene_names=["a", "b"],
         barcodes=raw_barcodes,
-        counts=np.ones((1, 5), dtype=np.int64),
+        counts=counts,
         filtered_subset=raw_barcodes[:2],
+        em_counts=counts + 100,
     )
-    a = scsplice.io.read_starsolo_gene(
-        tmp_path / "s1", "s1", use_internal_whitelist=False,
+
+    raw_standard = scsplice.io.read_starsolo_gene(
+        root,
+        "s1",
+        use_internal_whitelist=False,
+        matrix_source="raw",
+        matrix_file="matrix.mtx",
     )
-    # filtered/ exists (with 2 cells) but is_internal_whitelist=False; we read
-    # filtered/ (no whitelist provided) which has 2 cells. To explicitly test
-    # raw-fallback we'd need to delete filtered/. The behavior of preferring
-    # filtered/ when no whitelist is provided is the correct "no surprise"
-    # default for users who haven't asked for raw.
-    # Document the expected current behavior: filtered/ is still preferred.
-    assert a.n_obs == 2
+    assert raw_standard.n_obs == 5
+    assert np.array_equal(np.asarray(raw_standard.X.todense()), counts.T)
+
+    filtered = scsplice.io.read_starsolo_gene(
+        root,
+        "s1",
+        use_internal_whitelist=False,
+        matrix_source="filtered",
+    )
+    assert filtered.n_obs == 2
+    assert np.array_equal(np.asarray(filtered.X.todense()), counts[:, :2].T)
+
+    historical = scsplice.io.read_starsolo_gene(
+        root,
+        "s1",
+        use_internal_whitelist=False,
+        matrix_source="auto",
+    )
+    assert historical.n_obs == 2
+    assert historical.uns["scsplice"]["params"]["read_starsolo_gene"][
+        "resolved_matrix_sources"
+    ] == ["filtered"]
+
+
+def test_read_starsolo_gene_matrix_fallback_and_gzip(tmp_path):
+    import scsplice  # noqa: PLC0415
+
+    counts = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+    root = _make_starsolo_gene_dir(
+        tmp_path / "s1",
+        gene_ids=["G1", "G2"],
+        gene_names=["a", "b"],
+        barcodes=["BC1", "BC2", "BC3"],
+        counts=counts,
+        filtered_subset=["BC1", "BC3"],
+    )
+    raw_matrix = root / "Solo.out" / "Gene" / "raw" / "matrix.mtx"
+    compressed = raw_matrix.with_suffix(".mtx.gz")
+    with raw_matrix.open("rb") as source, gzip.open(compressed, "wb") as destination:
+        shutil.copyfileobj(source, destination)
+    raw_matrix.unlink()
+
+    a = scsplice.io.read_starsolo_gene(root, "s1")
+    assert np.array_equal(np.asarray(a.X.todense()), counts[:, [0, 2]].T)
+    assert a.uns["scsplice"]["params"]["read_starsolo_gene"]["resolved_matrix_files"] == [
+        "matrix.mtx.gz"
+    ]
 
 
 def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
@@ -253,7 +340,8 @@ def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
     raw_barcodes = ["BC0", "BC1", "BC2", "BC3"]
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1"], gene_names=["a"],
+        gene_ids=["G1"],
+        gene_names=["a"],
         barcodes=raw_barcodes,
         counts=np.array([[1, 2, 3, 4]], dtype=np.int64),
         filtered_subset=raw_barcodes[:2],
@@ -267,7 +355,8 @@ def test_read_starsolo_gene_tissue_positions_v2_header(tmp_path):
     )
 
     a = scsplice.io.read_starsolo_gene(
-        tmp_path / "s1", "s1",
+        tmp_path / "s1",
+        "s1",
         tissue_positions=[tp],
         spatial_library_ids=["sample_visium_1"],
     )
@@ -293,18 +382,17 @@ def test_read_starsolo_gene_tissue_positions_v1_no_header(tmp_path):
     raw_barcodes = ["BC0", "BC1", "BC2"]
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1"], gene_names=["a"],
+        gene_ids=["G1"],
+        gene_names=["a"],
         barcodes=raw_barcodes,
         counts=np.array([[1, 2, 3]], dtype=np.int64),
         filtered_subset=raw_barcodes,
     )
     tp = tmp_path / "tissue_positions_list.csv"
-    tp.write_text(
-        "BC1,1,0,0,100.5,200.5\n"
-        "BC2,0,1,2,300.5,400.5\n"
-    )
+    tp.write_text("BC1,1,0,0,100.5,200.5\nBC2,0,1,2,300.5,400.5\n")
     a = scsplice.io.read_starsolo_gene(
-        tmp_path / "s1", "s1",
+        tmp_path / "s1",
+        "s1",
         tissue_positions=[tp],
     )
     assert a.n_obs == 2
@@ -317,7 +405,8 @@ def test_read_starsolo_gene_tissue_positions_warns_on_dual_whitelist(tmp_path):
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1"], gene_names=["a"],
+        gene_ids=["G1"],
+        gene_names=["a"],
         barcodes=["BC1", "BC2", "BC3"],
         counts=np.array([[1, 2, 3]], dtype=np.int64),
         filtered_subset=["BC1", "BC2", "BC3"],
@@ -329,7 +418,8 @@ def test_read_starsolo_gene_tissue_positions_warns_on_dual_whitelist(tmp_path):
     )
     with pytest.warns(UserWarning, match="tissue_positions takes precedence"):
         a = scsplice.io.read_starsolo_gene(
-            tmp_path / "s1", "s1",
+            tmp_path / "s1",
+            "s1",
             barcode_whitelists=[["BC2", "BC3"]],
             tissue_positions=[tp],
         )
@@ -343,13 +433,14 @@ def test_read_starsolo_gene_dimension_mismatch_raises(tmp_path):
 
     base = _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1", "G2"], gene_names=["a", "b"],
+        gene_ids=["G1", "G2"],
+        gene_names=["a", "b"],
         barcodes=["BC1", "BC2"],
         counts=np.array([[1, 2], [3, 4]], dtype=np.int64),
         filtered_subset=["BC1", "BC2"],
     )
-    # Truncate filtered/barcodes.tsv.
-    bc_path = base / "Solo.out" / "Gene" / "filtered" / "barcodes.tsv"
+    # Truncate the selected raw/barcodes.tsv so it disagrees with the matrix.
+    bc_path = base / "Solo.out" / "Gene" / "raw" / "barcodes.tsv"
     bc_path.write_text("BC1\n")
     with pytest.raises(ValueError, match="dimension mismatch"):
         scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1")
@@ -360,8 +451,10 @@ def test_read_starsolo_gene_argument_validation(tmp_path):
 
     _make_starsolo_gene_dir(
         tmp_path / "s1",
-        gene_ids=["G1"], gene_names=["a"],
-        barcodes=["BC1"], counts=np.array([[1]], dtype=np.int64),
+        gene_ids=["G1"],
+        gene_names=["a"],
+        barcodes=["BC1"],
+        counts=np.array([[1]], dtype=np.int64),
         filtered_subset=["BC1"],
     )
     with pytest.raises(ValueError, match="must be unique"):
@@ -370,21 +463,41 @@ def test_read_starsolo_gene_argument_validation(tmp_path):
         scsplice.io.read_starsolo_gene([tmp_path / "s1"], ["s1", "s2"])
     with pytest.raises(ValueError, match="var_names"):
         scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1", var_names="bogus")
+    with pytest.raises(ValueError, match="matrix_source"):
+        scsplice.io.read_starsolo_gene(
+            tmp_path / "s1",
+            "s1",
+            matrix_source="unknown",
+        )
+    with pytest.raises(ValueError, match="non-empty"):
+        scsplice.io.read_starsolo_gene(tmp_path / "s1", "s1", matrix_file="")
+    with pytest.raises(FileNotFoundError, match="missing.mtx"):
+        scsplice.io.read_starsolo_gene(
+            tmp_path / "s1",
+            "s1",
+            matrix_file="missing.mtx",
+        )
 
 
 # -----------------
 # Real-data tests
 # -----------------
 
+
 @pytest.mark.real_data
 def test_read_starsolo_gene_real_two_samples(real_data_samples, real_data_sample_ids):
     """Cross-check against scanpy.read_mtx on the same two STARsolo samples."""
     import scsplice  # noqa: PLC0415
+
     sc = pytest.importorskip("scanpy")
 
     a = scsplice.io.read_starsolo_gene(
-        real_data_samples, real_data_sample_ids,
-        # Filtered/ default — same as scanpy's typical 10x flow.
+        real_data_samples,
+        real_data_sample_ids,
+        matrix_source="filtered",
+        matrix_file="matrix.mtx",
+        # Keep this large-data equivalence check on the compact filtered input.
+        # Synthetic tests above cover the raw EM-first default.
     )
     # Schema assertions.
     assert a.X.dtype == np.float64
@@ -406,6 +519,7 @@ def test_read_starsolo_gene_real_two_samples(real_data_samples, real_data_sample
         ad_sc.var_names = feats[0].tolist()
         parts.append(ad_sc)
     import anndata as ad_mod  # noqa: PLC0415
+
     combined = ad_mod.concat(parts, axis=0, join="outer", fill_value=0)
 
     # Cell counts must match (same filtered/ source on both sides).
@@ -421,7 +535,7 @@ def test_read_starsolo_gene_real_two_samples(real_data_samples, real_data_sample
     cmb_sub = combined[common_obs, common_var].X
     # densify a small slice to compare without blowing memory.
     n_check = min(2000, len(common_obs))
-    diff = (a_sub[:n_check].toarray() - cmb_sub[:n_check].toarray())
+    diff = a_sub[:n_check].toarray() - cmb_sub[:n_check].toarray()
     assert np.array_equal(diff, np.zeros_like(diff))
 
 
@@ -431,7 +545,11 @@ def test_read_starsolo_gene_real_smoke_print(real_data_samples, real_data_sample
     import scsplice  # noqa: PLC0415
 
     a = scsplice.io.read_starsolo_gene(
-        real_data_samples, real_data_sample_ids, verbose=True,
+        real_data_samples,
+        real_data_sample_ids,
+        matrix_source="filtered",
+        matrix_file="matrix.mtx",
+        verbose=True,
     )
     out = capsys.readouterr().out
     assert "Built Gene AnnData" in out

@@ -16,6 +16,7 @@ import scipy.sparse as sp
 def _openmp_enabled() -> bool:
     try:
         from scsplice import _scsplice_cpp  # noqa: PLC0415
+
         return bool(_scsplice_cpp.__openmp__)
     except ImportError:
         return False
@@ -36,16 +37,15 @@ def _make_adata(n_events: int = 25, n_cells: int = 200, *, seed: int = 0) -> ad.
             "start": np.arange(n_events, dtype=np.int64) * 100,
             "end": np.arange(n_events, dtype=np.int64) * 100 + 50,
             "strand": pd.Categorical(["+"] * n_events),
-            "row_names_mtx": [f"chr1:{i*100}-{i*100+50}" for i in range(n_events)],
+            "row_names_mtx": [f"chr1:{i * 100}-{i * 100 + 50}" for i in range(n_events)],
             "group_id": np.arange(n_events, dtype=np.int32) % 5,
             "group_kind": pd.Categorical(["S"] * n_events, categories=["S", "E"]),
             "group_count": np.full(n_events, 5, dtype=np.int32),
         },
-        index=[f"chr1:{i*100}-{i*100+50}_S" for i in range(n_events)],
+        index=[f"chr1:{i * 100}-{i * 100 + 50}_S" for i in range(n_events)],
     )
     obs = pd.DataFrame(
-        {"barcode": [f"bc{i}" for i in range(n_cells)],
-         "sample_id": ["s1"] * n_cells},
+        {"barcode": [f"bc{i}" for i in range(n_cells)], "sample_id": ["s1"] * n_cells},
         index=[f"bc{i}-s1" for i in range(n_cells)],
     )
     a = ad.AnnData(layers={"M1": M1, "M2": M2}, obs=obs, var=var)
@@ -68,6 +68,8 @@ def test_pseudo_correlation_smoke():
     # Signed pseudo-correlation in [-1, 1] when finite.
     assert (r[finite] >= -1.0 - 1e-9).all()
     assert (r[finite] <= 1.0 + 1e-9).all()
+    assert a.varm["pseudo_correlation_null"].shape == (a.n_vars, 100)
+    assert a.uns["scsplice"]["params"]["pseudo_correlation"]["n_permutations"] == 100
 
 
 def test_pseudo_correlation_metric_dispatch():
@@ -76,8 +78,20 @@ def test_pseudo_correlation_metric_dispatch():
     a = _make_adata(n_events=15, seed=7)
     rng = np.random.default_rng(0)
     zdb = rng.normal(size=(a.n_vars, a.n_obs))
-    a_cox = scsplice.tl.pseudo_correlation(a, zdb, metric="CoxSnell", inplace=False)
-    a_nag = scsplice.tl.pseudo_correlation(a, zdb, metric="Nagelkerke", inplace=False)
+    a_cox = scsplice.tl.pseudo_correlation(
+        a,
+        zdb,
+        metric="CoxSnell",
+        n_permutations=0,
+        inplace=False,
+    )
+    a_nag = scsplice.tl.pseudo_correlation(
+        a,
+        zdb,
+        metric="Nagelkerke",
+        n_permutations=0,
+        inplace=False,
+    )
     cox = a_cox.var["pseudo_correlation"].to_numpy()
     nag = a_nag.var["pseudo_correlation"].to_numpy()
     finite = np.isfinite(cox) & np.isfinite(nag)
@@ -124,8 +138,8 @@ def test_pseudo_correlation_thread_determinism():
     a4 = a1.copy()
     rng = np.random.default_rng(99)
     zdb = rng.normal(size=(a1.n_vars, a1.n_obs))
-    scsplice.tl.pseudo_correlation(a1, zdb, n_threads=1)
-    scsplice.tl.pseudo_correlation(a4, zdb, n_threads=4)
+    scsplice.tl.pseudo_correlation(a1, zdb, n_permutations=0, n_threads=1)
+    scsplice.tl.pseudo_correlation(a4, zdb, n_permutations=0, n_threads=4)
     r1 = a1.var["pseudo_correlation"].to_numpy()
     r4 = a4.var["pseudo_correlation"].to_numpy()
     nan1 = np.isnan(r1)
@@ -133,7 +147,7 @@ def test_pseudo_correlation_thread_determinism():
     assert np.array_equal(r1[~nan1], r4[~nan1])
 
 
-def test_pseudo_correlation_null_distribution():
+def test_pseudo_correlation_null_distribution_and_inference():
     import scsplice  # noqa: PLC0415
 
     a = _make_adata(n_events=20, n_cells=150, seed=3)
@@ -143,6 +157,87 @@ def test_pseudo_correlation_null_distribution():
     null = a.varm["pseudo_correlation_null"]
     assert null.shape == (a.n_vars, 5)
     assert null.dtype == np.float64
+
+    valid = ~np.isnan(null)
+    n_valid = valid.sum(axis=1)
+    expected_mean = np.full(a.n_vars, np.nan)
+    np.divide(np.nansum(null, axis=1), n_valid, out=expected_mean, where=n_valid > 0)
+    assert np.allclose(
+        a.var["pseudo_correlation_null_mean"],
+        expected_mean,
+        equal_nan=True,
+    )
+
+    expected_sd = np.full(a.n_vars, np.nan)
+    has_sd = n_valid > 1
+    expected_sd[has_sd] = np.nanstd(null[has_sd], axis=1, ddof=1)
+    assert np.allclose(
+        a.var["pseudo_correlation_null_sd"],
+        expected_sd,
+        equal_nan=True,
+    )
+    assert np.array_equal(
+        a.var["pseudo_correlation_n_perm_valid"].to_numpy(),
+        n_valid,
+    )
+
+    observed = a.var["pseudo_correlation"].to_numpy()
+    exceed = np.sum(valid & (np.abs(null) >= np.abs(observed)[:, None]), axis=1)
+    expected_p = (exceed + 1) / (n_valid + 1)
+    expected_p[np.isnan(observed) | (n_valid == 0)] = np.nan
+    assert np.allclose(
+        a.var["pseudo_correlation_emp_pvalue"],
+        expected_p,
+        equal_nan=True,
+    )
+    retained = ~np.isnan(observed) & ~np.isnan(expected_mean)
+    adjusted = a.var["pseudo_correlation_emp_padj"].to_numpy()
+    assert np.isnan(adjusted[~retained]).all()
+    retained_p = expected_p[retained]
+    order = np.argsort(retained_p, kind="mergesort")
+    ranked = retained_p[order]
+    ranked_adjusted = np.minimum.accumulate(
+        (ranked * len(ranked) / np.arange(1, len(ranked) + 1))[::-1]
+    )[::-1]
+    expected_adjusted = np.empty_like(ranked_adjusted)
+    expected_adjusted[order] = np.minimum(ranked_adjusted, 1.0)
+    assert np.allclose(adjusted[retained], expected_adjusted)
+
+    result = scsplice.tl.get_pseudo_correlation_result(a)
+    assert isinstance(result, scsplice.tl.PseudoCorrelationResult)
+    assert list(result.statistics.columns) == [
+        "event",
+        "pseudo_correlation",
+        "null_distribution",
+        "null_sd",
+        "n_perm_valid",
+        "emp_pvalue",
+        "emp_padj",
+    ]
+    assert list(result.null_distribution.columns) == [
+        "event",
+        "permutation",
+        "null_pseudo_correlation",
+    ]
+    assert len(result.statistics) == retained.sum()
+    assert len(result.null_distribution) == retained.sum() * 5
+    assert result.null_distribution["event"].tolist() == (result.statistics["event"].tolist() * 5)
+    assert (
+        result.null_distribution["permutation"].tolist()
+        == np.repeat(
+            np.arange(1, 6),
+            retained.sum(),
+        ).tolist()
+    )
+    reconstructed = (
+        result.null_distribution["null_pseudo_correlation"].to_numpy().reshape(5, retained.sum()).T
+    )
+    assert np.allclose(reconstructed, null[retained, :], equal_nan=True)
+    assert result.metadata["n_events_input"] == a.n_vars
+    assert result.metadata["n_events_retained"] == retained.sum()
+    assert result.metadata["n_null_draws"] == retained.sum() * 5
+    assert result.metadata["n_null_valid"] == valid[retained, :].sum()
+    assert result.metadata["pooled_null_usage"] == "descriptive"
 
 
 def test_pseudo_correlation_seeded_null_reproducible():
@@ -170,8 +265,18 @@ def test_pseudo_correlation_sign_follows_slope():
     rng = np.random.default_rng(0)
     zdb_pos = rng.normal(size=(a.n_vars, a.n_obs))
 
-    a_pos = scsplice.tl.pseudo_correlation(a, zdb_pos, inplace=False)
-    a_neg = scsplice.tl.pseudo_correlation(a, -zdb_pos, inplace=False)
+    a_pos = scsplice.tl.pseudo_correlation(
+        a,
+        zdb_pos,
+        n_permutations=0,
+        inplace=False,
+    )
+    a_neg = scsplice.tl.pseudo_correlation(
+        a,
+        -zdb_pos,
+        n_permutations=0,
+        inplace=False,
+    )
     p = a_pos.var["pseudo_correlation"].to_numpy()
     n = a_neg.var["pseudo_correlation"].to_numpy()
     finite = np.isfinite(p) & np.isfinite(n)
@@ -184,12 +289,120 @@ def test_pseudo_correlation_inplace_vs_copy():
 
     a = _make_adata(n_events=10, n_cells=80)
     zdb = np.zeros((a.n_vars, a.n_obs))
-    out = scsplice.tl.pseudo_correlation(a, zdb, inplace=True)
+    out = scsplice.tl.pseudo_correlation(
+        a,
+        zdb,
+        n_permutations=0,
+        inplace=True,
+    )
     assert out is None
     assert "pseudo_correlation" in a.var.columns
 
     a2 = _make_adata(n_events=10, n_cells=80)
-    out2 = scsplice.tl.pseudo_correlation(a2, zdb, inplace=False)
+    out2 = scsplice.tl.pseudo_correlation(
+        a2,
+        zdb,
+        n_permutations=0,
+        inplace=False,
+    )
     assert out2 is not None
     assert "pseudo_correlation" not in a2.var.columns
     assert "pseudo_correlation" in out2.var.columns
+
+
+def test_pseudo_correlation_one_and_zero_permutations_clear_stale_result():
+    import scsplice  # noqa: PLC0415
+
+    a = _make_adata(n_events=8, n_cells=80, seed=4)
+    zdb = np.random.default_rng(12).normal(size=(a.n_vars, a.n_obs))
+    scsplice.tl.pseudo_correlation(a, zdb, n_permutations=1, seed=5)
+    null = a.varm["pseudo_correlation_null"]
+    assert null.shape == (a.n_vars, 1)
+    assert np.allclose(
+        a.var["pseudo_correlation_null_mean"],
+        null[:, 0],
+        equal_nan=True,
+    )
+    assert a.var["pseudo_correlation_null_sd"].isna().all()
+
+    scsplice.tl.pseudo_correlation(a, zdb, n_permutations=0)
+    assert "pseudo_correlation_null" not in a.varm
+    assert (a.var["pseudo_correlation_n_perm_valid"] == 0).all()
+    assert a.var["pseudo_correlation_null_mean"].isna().all()
+    result = scsplice.tl.get_pseudo_correlation_result(a)
+    assert result.statistics.empty
+    assert result.null_distribution.empty
+    assert result.metadata["permutation_count"] == 0
+
+
+def test_pseudo_correlation_export_omits_invalid_events():
+    import scsplice  # noqa: PLC0415
+
+    a = _make_adata(n_events=8, n_cells=80, seed=17)
+    for layer in ("M1", "M2"):
+        matrix = a.layers[layer].tolil()
+        matrix[:, 0] = 0
+        a.layers[layer] = matrix.tocsc()
+    zdb = np.random.default_rng(19).normal(size=(a.n_vars, a.n_obs))
+
+    scsplice.tl.pseudo_correlation(a, zdb, n_permutations=3, seed=2)
+    assert np.isnan(a.var["pseudo_correlation"].iloc[0])
+    result = scsplice.tl.get_pseudo_correlation_result(a)
+    invalid_event = str(a.var_names[0])
+    assert invalid_event not in set(result.statistics["event"])
+    assert invalid_event not in set(result.null_distribution["event"])
+    assert result.metadata["n_events_retained"] == len(result.statistics)
+
+
+def test_pseudo_correlation_custom_key_export_and_h5ad_roundtrip(tmp_path):
+    import scsplice  # noqa: PLC0415
+
+    a = _make_adata(n_events=10, n_cells=90, seed=8)
+    zdb = np.random.default_rng(7).normal(size=(a.n_vars, a.n_obs))
+    scsplice.tl.pseudo_correlation(
+        a,
+        zdb,
+        n_permutations=4,
+        seed=22,
+        key_added="latent_1",
+    )
+    result = scsplice.tl.get_pseudo_correlation_result(a, key="latent_1")
+    statistics_path = tmp_path / "statistics.csv"
+    null_path = tmp_path / "null.csv"
+    result.statistics.to_csv(statistics_path, index=False)
+    result.null_distribution.to_csv(null_path, index=False)
+    pd.testing.assert_frame_equal(pd.read_csv(statistics_path), result.statistics)
+    pd.testing.assert_frame_equal(pd.read_csv(null_path), result.null_distribution)
+
+    h5ad_path = tmp_path / "pseudo.h5ad"
+    a.write_h5ad(h5ad_path)
+    restored = ad.read_h5ad(h5ad_path)
+    restored_result = scsplice.tl.get_pseudo_correlation_result(
+        restored,
+        key="latent_1",
+    )
+    pd.testing.assert_frame_equal(restored_result.statistics, result.statistics)
+    pd.testing.assert_frame_equal(
+        restored_result.null_distribution,
+        result.null_distribution,
+    )
+    assert restored_result.metadata == result.metadata
+
+
+def test_pseudo_correlation_argument_validation():
+    import scsplice  # noqa: PLC0415
+
+    a = _make_adata(n_events=5, n_cells=20)
+    zdb = np.zeros((a.n_vars, a.n_obs))
+    with pytest.raises(ValueError, match="n_permutations"):
+        scsplice.tl.pseudo_correlation(a, zdb, n_permutations=1.5)
+    with pytest.raises(ValueError, match="n_permutations"):
+        scsplice.tl.pseudo_correlation(a, zdb, n_permutations=-1)
+    with pytest.raises(ValueError, match="seed"):
+        scsplice.tl.pseudo_correlation(a, zdb, n_permutations=1, seed=1.5)
+    with pytest.raises(ValueError, match="n_threads"):
+        scsplice.tl.pseudo_correlation(a, zdb, n_threads=0)
+    with pytest.raises(ValueError, match="key_added"):
+        scsplice.tl.pseudo_correlation(a, zdb, key_added="")
+    with pytest.raises(KeyError, match="complete pseudo-correlation"):
+        scsplice.tl.get_pseudo_correlation_result(a, key="missing")

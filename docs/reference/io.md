@@ -5,7 +5,7 @@ Input / output functions for STARsolo output. Three readers, one consistent API 
 | Function | STARsolo source | Output |
 |---|---|---|
 | `read_starsolo` | `Solo.out/SJ/` | Splicing AnnData (`layers["M1"]`, `layers["M2"]`) |
-| `read_starsolo_gene` | `Solo.out/Gene/` | Gene-expression AnnData (`X` = raw counts) |
+| `read_starsolo_gene` | `Solo.out/Gene/{raw,filtered}/` | Gene-expression AnnData (`X` = selected counts; raw EM-first by default) |
 | `read_starsolo_velocyto` | `Solo.out/Velocyto/` | Velocity AnnData (`layers["spliced/unspliced/ambiguous"]`) |
 
 All three accept `tissue_positions=` for Visium / spatial samples and populate squidpy-compatible `obsm["spatial"]` and `uns["spatial"]`.

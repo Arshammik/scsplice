@@ -33,6 +33,8 @@ gex = scs.io.read_starsolo_gene(
     sample_dirs=sample_dirs,
     sample_ids=sample_ids,
     var_names="gene_ids",
+    matrix_source="raw",  # default: prefer UniqueAndMult-EM.mtx
+    matrix_file="auto",
 )
 
 # RNA velocity (spliced / unspliced / ambiguous in layers; X = spliced)
@@ -45,8 +47,9 @@ vel = scs.io.read_starsolo_velocyto(
 !!! note "Whitelist alignment"
     Each reader applies its own whitelist by default (`use_internal_whitelist=True`),
     which means the three AnnDatas may have slightly different cell sets (the SJ
-    reader keeps cells with at least one junction count; the gene and velocyto
-    readers use `Gene/filtered/barcodes.tsv`). The intersection step below
+    reader keeps cells with at least one junction count; the gene reader
+    applies `Gene/filtered/barcodes.tsv` to its selected raw matrix, and the
+    velocyto reader uses the same whitelist). The intersection step below
     handles this.
 
 ---

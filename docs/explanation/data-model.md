@@ -66,6 +66,28 @@ The `_S` and `_E` group-ID spaces are **disjoint** — a junction's start-group 
 
 `group_id` is the sole input to the `make_m2` C++ kernel (besides M1). The kernel precondition is that IDs are dense (no gaps) and non-negative. Violating this precondition raises a `ValueError` before entering C++.
 
+## Pseudo-correlation results
+
+For the default `key_added="pseudo_correlation"`, the observed statistic and
+event-wise inference remain aligned to the event axis:
+
+- `var["pseudo_correlation"]`: observed signed pseudo-R².
+- `var["pseudo_correlation_null_mean"]` and
+  `var["pseudo_correlation_null_sd"]`: mean and sample standard deviation of
+  each event's valid null draws.
+- `var["pseudo_correlation_n_perm_valid"]`: valid draw count.
+- `var["pseudo_correlation_emp_pvalue"]` and
+  `var["pseudo_correlation_emp_padj"]`: two-sided empirical p-value and
+  Benjamini-Hochberg adjustment.
+- `varm["pseudo_correlation_null"]`: raw events × permutations null matrix.
+- `uns["scsplice"]["pseudo_correlation"]["pseudo_correlation"]`: parameters
+  and event/draw counts.
+
+Custom `key_added` values replace the `pseudo_correlation` prefix in every
+location. `get_pseudo_correlation_result()` uses these aligned fields to build
+the R-compatible `statistics` and long `null_distribution` tables on demand,
+so the long representation does not consume space in serialized AnnData.
+
 ## `m2_valid` sentinel
 
 `adata.uns["scsplice"]["m2_valid"]` tracks whether M2 is consistent with the current state of M1 and `group_id`:
