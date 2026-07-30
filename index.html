@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="assets/favicon-96x96.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1360,7 +1360,7 @@
 <tr>
 <td><code>read_starsolo_gene</code></td>
 <td><code>scsplice.io</code></td>
-<td>Ingest <code>Solo.out/Gene/</code> into a cell × gene AnnData with raw counts in <code>X</code>. Drop-in for <code>scanpy.pp.normalize_total</code> and <code>scvi-tools</code>. Supports <code>tissue_positions=</code> and squidpy <code>obsm["spatial"]</code>.</td>
+<td>Ingest selectable raw/filtered <code>Solo.out/Gene/</code> matrices into a cell × gene AnnData. Defaults to raw EM counts with independent barcode filtering.</td>
 </tr>
 <tr>
 <td><code>read_starsolo_velocyto</code></td>
@@ -1380,7 +1380,12 @@
 <tr>
 <td><code>pseudo_correlation</code></td>
 <td><code>scsplice.tl</code></td>
-<td>Per-event signed pseudo-R² (Cox-Snell / Nagelkerke) against an external predictor matrix</td>
+<td>Per-event signed pseudo-R² with repeated permutation inference</td>
+</tr>
+<tr>
+<td><code>get_pseudo_correlation_result</code></td>
+<td><code>scsplice.tl</code></td>
+<td>Materialize export-ready statistics and long null-distribution tables</td>
 </tr>
 </tbody>
 </table>
@@ -1405,12 +1410,12 @@
 <ul>
 <li><strong>AnnData-native.</strong> Junctions are <code>var</code>, cells are <code>obs</code>, M1 and M2 are <code>layers</code>. No custom objects — <code>scanpy</code>, <code>scvi-tools</code>, and the rest of the ecosystem work on the output without adapters.</li>
 <li><strong>Bit-exact parity with R splikit.</strong> M2 is bit-identical; HVE deviance agrees to <code>rtol=1e-10</code>; pseudo-correlation agrees to <code>rtol=1e-7</code>. The cross-language regression suite lives on the <a href="https://github.com/Arshammik/scsplice/tree/validation"><code>validation</code> branch</a>.</li>
-<li><strong>Two C++ kernels, one thin Python layer.</strong> <code>make_m2</code> and <code>highly_variable_events</code> delegate to pybind11-wrapped Eigen kernels; the Python layer handles validation, AnnData conventions, and dispatch only.</li>
+<li><strong>Compiled kernels, one thin Python layer.</strong> Core numerical work delegates to pybind11-wrapped Eigen kernels; Python handles validation, permutation orchestration, AnnData conventions, and export views.</li>
 <li><strong>Intentionally narrow scope.</strong> HVG, plotting, and silhouette utilities are not included — <code>scanpy</code>, <code>pyranges</code>, and <code>sklearn</code> already cover those.</li>
 </ul>
 <hr />
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>v1.0. The six functions in the table above are the complete v1.0 API.</p>
+<p>v2.0.1. The table above is the supported public API.</p>
 <p><strong>R package:</strong> <a href="https://github.com/csglab/splikit">splikit (CRAN)</a> — same algorithm, R / AnnData-agnostic design.</p>
 <hr />
 <p><em>Brand note: the hexagonal seagull logo is the original R splikit artwork, shared between both packages to signal that the Python and R implementations are the same algorithm with a unified brand. In dark mode the logo is rendered on a white pill background so the black-on-white illustration remains legible against the dark site background.</em></p>
@@ -1501,7 +1506,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "navigation.path", "search.suggest", "search.highlight", "search.share", "toc.follow", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

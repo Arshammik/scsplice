@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-96x96.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1946,7 +1946,7 @@ type. <code>scsplice.io</code> ships one reader for each, with a consistent API 
 <tr>
 <td><code>scs.io.read_starsolo_gene</code></td>
 <td><code>Solo.out/Gene/{raw,filtered}/</code></td>
-<td>AnnData with raw counts in <code>X</code> (single matrix); genes on <code>var</code></td>
+<td>AnnData with selected counts in <code>X</code> (raw EM-first by default); genes on <code>var</code></td>
 <td><strong>Implemented</strong> (<code>src/scsplice/io/_starsolo_gene.py</code>)</td>
 </tr>
 <tr>
@@ -2057,6 +2057,17 @@ are the scverse-idiomatic shape.</p>
 paired companion measurement on the same axis. Drop-in for
 <code>scanpy.pp.normalize_total</code>, <code>scanpy.pp.highly_variable_genes</code>,
 <code>scvi-tools.SCVI</code>, etc.</p>
+<p><strong>Matrix selection is independent from barcode filtering.</strong> The default
+<code>matrix_source="raw", matrix_file="auto"</code> prefers
+<code>raw/UniqueAndMult-EM.mtx</code> and falls back to <code>raw/matrix.mtx</code>. With
+<code>use_internal_whitelist=True</code>, the selected raw matrix is subsequently
+intersected with <code>filtered/barcodes.tsv</code>. Reading
+<code>matrix_source="filtered"</code> instead uses the already-filtered matrix directly.
+The compatibility source <code>"auto"</code> preserves scsplice 2.0.0 behavior: an
+external/spatial whitelist selects raw, while other calls prefer filtered and
+fall back to raw. All matrix choices also accept <code>.gz</code> variants. Because raw
+matrices can be substantially larger, memory-constrained workflows that do not
+need EM counts should explicitly select <code>matrix_source="filtered"</code>.</p>
 <p><strong>Choice of <code>var_names</code>:</strong> default to <code>gene_id</code> (Ensembl IDs are stable and
 unique). <code>gene_name</code> (symbols) goes in a sibling column; symbols are not
 guaranteed unique across the genome (e.g. <code>IGH@</code>) so they're poor <code>var_names</code>.
@@ -2133,9 +2144,10 @@ the integer codes.</p>
 <li>A <code>Sequence[str]</code> of raw barcodes.</li>
 </ul>
 <p>When <code>use_internal_whitelist=True</code> (default), missing slots fall back to
-<code>&lt;sample_root&gt;/Solo.out/Gene/filtered/barcodes.tsv</code> per sample. If neither an
-explicit whitelist nor the internal one is available, the reader falls back to
-the full barcode set in <code>Solo.out/&lt;feature&gt;/raw/barcodes.tsv</code>.</p>
+<code>&lt;sample_root&gt;/Solo.out/Gene/filtered/barcodes.tsv</code> per sample. The whitelist
+is applied to whichever gene matrix was selected. If neither an explicit
+whitelist nor the internal one is available, the reader retains the full
+barcode set from the selected matrix.</p>
 <h3 id="min_counts-filter-where-applicable"><code>min_counts</code> filter (where applicable)<a class="headerlink" href="#min_counts-filter-where-applicable" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>read_starsolo</code>: filters events whose <code>M1.sum(axis=0) &gt;= min_counts</code> in
@@ -2471,7 +2483,7 @@ directly; the detection is opaque to the caller.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "navigation.path", "search.suggest", "search.highlight", "search.share", "toc.follow", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-96x96.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1120,6 +1120,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pseudo-correlation-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pseudo-correlation results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#m2_valid-sentinel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1321,6 +1332,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pseudo-correlation-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pseudo-correlation results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#m2_valid-sentinel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1463,6 +1485,26 @@
 <p><code>adata.var["group_id"]</code> is a dense integer array of shape <code>(n_vars,)</code> with values in <code>0..G-1</code>, where <code>G</code> is the number of distinct LJV groups. Events in the same group share the same <code>group_id</code>.</p>
 <p>The <code>_S</code> and <code>_E</code> group-ID spaces are <strong>disjoint</strong> — a junction's start-group and end-group always receive different <code>group_id</code> values, even when the underlying junction coordinates overlap. This ensures that the M2 kernel sums only within the correct competitive context.</p>
 <p><code>group_id</code> is the sole input to the <code>make_m2</code> C++ kernel (besides M1). The kernel precondition is that IDs are dense (no gaps) and non-negative. Violating this precondition raises a <code>ValueError</code> before entering C++.</p>
+<h2 id="pseudo-correlation-results">Pseudo-correlation results<a class="headerlink" href="#pseudo-correlation-results" title="Permanent link">&para;</a></h2>
+<p>For the default <code>key_added="pseudo_correlation"</code>, the observed statistic and
+event-wise inference remain aligned to the event axis:</p>
+<ul>
+<li><code>var["pseudo_correlation"]</code>: observed signed pseudo-R².</li>
+<li><code>var["pseudo_correlation_null_mean"]</code> and
+  <code>var["pseudo_correlation_null_sd"]</code>: mean and sample standard deviation of
+  each event's valid null draws.</li>
+<li><code>var["pseudo_correlation_n_perm_valid"]</code>: valid draw count.</li>
+<li><code>var["pseudo_correlation_emp_pvalue"]</code> and
+  <code>var["pseudo_correlation_emp_padj"]</code>: two-sided empirical p-value and
+  Benjamini-Hochberg adjustment.</li>
+<li><code>varm["pseudo_correlation_null"]</code>: raw events × permutations null matrix.</li>
+<li><code>uns["scsplice"]["pseudo_correlation"]["pseudo_correlation"]</code>: parameters
+  and event/draw counts.</li>
+</ul>
+<p>Custom <code>key_added</code> values replace the <code>pseudo_correlation</code> prefix in every
+location. <code>get_pseudo_correlation_result()</code> uses these aligned fields to build
+the R-compatible <code>statistics</code> and long <code>null_distribution</code> tables on demand,
+so the long representation does not consume space in serialized AnnData.</p>
 <h2 id="m2_valid-sentinel"><code>m2_valid</code> sentinel<a class="headerlink" href="#m2_valid-sentinel" title="Permanent link">&para;</a></h2>
 <p><code>adata.uns["scsplice"]["m2_valid"]</code> tracks whether M2 is consistent with the current state of M1 and <code>group_id</code>:</p>
 <ul>
@@ -1573,7 +1615,7 @@ migrated key.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "navigation.path", "search.suggest", "search.highlight", "search.share", "toc.follow", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
