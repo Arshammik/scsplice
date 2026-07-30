@@ -1,15 +1,17 @@
 """STARsolo Gene-feature ingestion → cell × gene AnnData.
 
-Reads ``Solo.out/Gene/{raw,filtered}/{barcodes.tsv, features.tsv, matrix.mtx}``
-for one or more samples. The reader applies the consistent whitelist
+Reads ``Solo.out/Gene/{raw,filtered}/{barcodes.tsv, features.tsv, *.mtx}``
+for one or more samples. Matrix selection is independent from barcode
+filtering: by default the reader uses ``raw/UniqueAndMult-EM.mtx`` when
+available (falling back to ``raw/matrix.mtx``), then applies the requested
+whitelist. The reader applies the consistent whitelist
 precedence implemented in :mod:`scsplice.io._whitelist`:
 
     tissue_positions  >  explicit barcode_whitelist  >  internal filtered/  >  raw
 
-When a custom whitelist is supplied (explicit or spatial), counts are read
-from ``Gene/raw/`` so the reader can intersect with barcodes that may not
-be in STARsolo's filtered set; otherwise the much-smaller ``filtered/`` is
-used directly.
+The compatibility ``matrix_source="auto"`` mode retains the historical
+Python source selection: custom whitelists use ``raw/`` while calls without
+one prefer ``filtered/`` and fall back to ``raw/``.
 
 Multi-sample inputs are concatenated on the cell axis with
 ``obs_names = "<barcode>-<sample_id>"`` and the gene axis is unioned
@@ -37,11 +39,9 @@ import scipy.sparse as sp
 from scsplice.io._starsolo import _safe_mmread  # shared mmread guard
 from scsplice.io._whitelist import (
     ResolvedWhitelist,
-    load_tissue_positions,  # re-exported for callers that want raw access
     normalize_per_sample_arg,
     resolve_whitelist,
 )
-
 
 __all__ = ["read_starsolo_gene"]
 
@@ -64,9 +64,35 @@ class _GeneSampleArtifacts:
     spatial: pd.DataFrame | None  # rows aligned to barcodes
     library_id: str | None
     whitelist_source: str
+    matrix_source: str
+    matrix_file: str
 
 
-def _resolve_gene_paths(sample_dir: str | Path, *, prefer_raw: bool) -> _GenePaths:
+def _resolve_matrix_path(directory: Path, matrix_file: str) -> Path | None:
+    """Resolve a Matrix Market file, accepting an optional gzip suffix."""
+    names = ("UniqueAndMult-EM.mtx", "matrix.mtx") if matrix_file == "auto" else (matrix_file,)
+    for name in names:
+        candidate = directory / name
+        if candidate.is_file():
+            return candidate
+        if not name.endswith(".gz"):
+            compressed = directory / f"{name}.gz"
+            if compressed.is_file():
+                return compressed
+    return None
+
+
+def _directory_has_matrix(directory: Path, matrix_file: str) -> bool:
+    return _resolve_matrix_path(directory, matrix_file) is not None
+
+
+def _resolve_gene_paths(
+    sample_dir: str | Path,
+    *,
+    matrix_source: Literal["raw", "filtered", "auto"],
+    matrix_file: str,
+    prefer_raw_for_auto: bool,
+) -> _GenePaths:
     """Locate the four input files for one sample.
 
     Accepts:
@@ -75,9 +101,10 @@ def _resolve_gene_paths(sample_dir: str | Path, *, prefer_raw: bool) -> _GenePat
       - ``<sample_root>/Solo.out/Gene/``
       - ``<sample_root>/Solo.out/Gene/raw/`` or ``.../filtered/``
 
-    ``prefer_raw=True`` forces use of ``raw/`` (when an external whitelist /
-    tissue_positions is provided); otherwise prefers ``filtered/`` and falls
-    back to ``raw/``.
+    ``matrix_source`` explicitly selects ``raw/`` or ``filtered/``. In
+    compatibility ``"auto"`` mode, direct source-directory inputs are honored;
+    otherwise external/spatial whitelists force ``raw/`` and calls without one
+    prefer ``filtered/`` before falling back to ``raw/``.
     """
     p = Path(sample_dir).expanduser().resolve()
 
@@ -88,57 +115,65 @@ def _resolve_gene_paths(sample_dir: str | Path, *, prefer_raw: bool) -> _GenePat
         gene_dir = (p / "Gene") if p.name == "Solo.out" else p.parent / "Gene"
     elif p.name == "Gene":
         gene_dir = p
-    elif (p / "raw").is_dir() or (p / "filtered").is_dir() or _has_mtx(p):
+    elif (p / "raw").is_dir() or (p / "filtered").is_dir() or _directory_has_matrix(p, matrix_file):
         # User pointed at raw/, filtered/, or directly at the dir holding mtx.
-        gene_dir = p.parent if _has_mtx(p) else p
+        gene_dir = p.parent if p.name in ("raw", "filtered") else p
     else:
         raise FileNotFoundError(
-            f"Cannot locate Solo.out/Gene under {sample_dir}. "
-            f"Tried: {p / 'Solo.out' / 'Gene'}."
+            f"Cannot locate Solo.out/Gene under {sample_dir}. Tried: {p / 'Solo.out' / 'Gene'}."
         )
 
     raw_dir = gene_dir / "raw"
     filt_dir = gene_dir / "filtered"
 
-    # If user pointed directly at raw/ or filtered/.
-    if _has_mtx(p) and p.name in ("raw", "filtered"):
-        chosen = p
-        used_raw = (p.name == "raw")
+    pointed_source = p if p.name in ("raw", "filtered") else None
+    if matrix_source == "raw":
+        chosen = raw_dir
+    elif matrix_source == "filtered":
+        chosen = filt_dir
     else:
-        if prefer_raw:
-            if not _has_mtx(raw_dir):
-                raise FileNotFoundError(
-                    f"prefer_raw=True but {raw_dir}/matrix.mtx[.gz] not found."
-                )
+        if pointed_source is not None:
+            chosen = pointed_source
+        elif prefer_raw_for_auto:
             chosen = raw_dir
-            used_raw = True
+        elif _directory_has_matrix(filt_dir, matrix_file):
+            chosen = filt_dir
         else:
-            if _has_mtx(filt_dir):
-                chosen = filt_dir
-                used_raw = False
-            elif _has_mtx(raw_dir):
-                chosen = raw_dir
-                used_raw = True
-            else:
-                raise FileNotFoundError(
-                    f"Neither {filt_dir}/matrix.mtx[.gz] nor "
-                    f"{raw_dir}/matrix.mtx[.gz] found."
-                )
+            chosen = raw_dir
 
-    matrix = chosen / "matrix.mtx" if (chosen / "matrix.mtx").exists() else chosen / "matrix.mtx.gz"
-    barcodes = chosen / "barcodes.tsv" if (chosen / "barcodes.tsv").exists() else chosen / "barcodes.tsv.gz"
-    features = chosen / "features.tsv" if (chosen / "features.tsv").exists() else chosen / "features.tsv.gz"
+    matrix = _resolve_matrix_path(chosen, matrix_file)
+    if matrix is None:
+        attempted = (
+            "UniqueAndMult-EM.mtx[.gz], matrix.mtx[.gz]"
+            if matrix_file == "auto"
+            else f"{matrix_file}[.gz]"
+            if not matrix_file.endswith(".gz")
+            else matrix_file
+        )
+        raise FileNotFoundError(f"No gene-expression matrix found in {chosen}. Tried: {attempted}.")
+
+    used_raw = chosen.name == "raw"
+    barcodes = (
+        chosen / "barcodes.tsv"
+        if (chosen / "barcodes.tsv").exists()
+        else chosen / "barcodes.tsv.gz"
+    )
+    features = (
+        chosen / "features.tsv"
+        if (chosen / "features.tsv").exists()
+        else chosen / "features.tsv.gz"
+    )
     internal_wl = filt_dir / "barcodes.tsv"
     if not internal_wl.exists() and (filt_dir / "barcodes.tsv.gz").exists():
         internal_wl = filt_dir / "barcodes.tsv.gz"
     return _GenePaths(
-        matrix=matrix, barcodes=barcodes, features=features,
-        source_dir=chosen, internal_whitelist=internal_wl, used_raw=used_raw,
+        matrix=matrix,
+        barcodes=barcodes,
+        features=features,
+        source_dir=chosen,
+        internal_whitelist=internal_wl,
+        used_raw=used_raw,
     )
-
-
-def _has_mtx(d: Path) -> bool:
-    return (d / "matrix.mtx").exists() or (d / "matrix.mtx.gz").exists()
 
 
 def _read_features(path: Path) -> pd.DataFrame:
@@ -149,19 +184,19 @@ def _read_features(path: Path) -> pd.DataFrame:
     feature_type column).
     """
     # Sniff column count.
-    df = pd.read_csv(path, sep="\t", header=None, dtype=str, compression="infer")
-    if df.shape[1] == 2:
-        df.columns = ["gene_id", "gene_name"]
-        df["feature_type"] = "Gene Expression"
-    elif df.shape[1] >= 3:
-        df = df.iloc[:, :3].copy()
-        df.columns = ["gene_id", "gene_name", "feature_type"]
+    features = pd.read_csv(path, sep="\t", header=None, dtype=str, compression="infer")
+    if features.shape[1] == 2:
+        features.columns = ["gene_id", "gene_name"]
+        features["feature_type"] = "Gene Expression"
+    elif features.shape[1] >= 3:
+        features = features.iloc[:, :3].copy()
+        features.columns = ["gene_id", "gene_name", "feature_type"]
     else:
         raise ValueError(
-            f"features.tsv at {path} has {df.shape[1]} columns; "
+            f"features.tsv at {path} has {features.shape[1]} columns; "
             "expected 2 (Cell Ranger v2) or 3 (v3 / STARsolo)."
         )
-    return df
+    return features
 
 
 def _read_one_gene_sample(
@@ -171,14 +206,21 @@ def _read_one_gene_sample(
     barcode_whitelist,
     tissue_positions,
     use_internal_whitelist: bool,
+    matrix_source: Literal["raw", "filtered", "auto"],
+    matrix_file: str,
     spatial_library_id: str | None,
     verbose: bool,
 ) -> _GeneSampleArtifacts:
     """Read one STARsolo Gene sample with the resolved whitelist applied."""
-    # Decide whether we need raw/ before resolving paths (we need the
-    # internal-whitelist path either way).
-    prefer_raw = (tissue_positions is not None) or (barcode_whitelist is not None)
-    paths = _resolve_gene_paths(sample_dir, prefer_raw=prefer_raw)
+    # Compatibility "auto" uses raw/ when a caller-supplied whitelist may
+    # contain cells outside STARsolo's filtered matrix.
+    prefer_raw_for_auto = tissue_positions is not None or barcode_whitelist is not None
+    paths = _resolve_gene_paths(
+        sample_dir,
+        matrix_source=matrix_source,
+        matrix_file=matrix_file,
+        prefer_raw_for_auto=prefer_raw_for_auto,
+    )
 
     if verbose:
         print(
@@ -195,18 +237,17 @@ def _read_one_gene_sample(
         spatial_library_id=spatial_library_id,
     )
 
-    # If user pointed at filtered/ but tissue_positions/explicit whitelist
-    # was provided, we silently re-resolve to raw/. (handled above by
-    # prefer_raw=True; this is an extra safety net for in-memory whitelists
-    # whose intersection might exceed filtered/'s coverage.)
-
     # MTX is genes × cells in 10x/STARsolo convention; AnnData wants cells × genes.
     mtx = _safe_mmread(paths.matrix, what="Gene matrix.mtx").tocsc().astype(np.float64)
     n_genes_mtx, n_cells_mtx = mtx.shape
 
     barcodes = pd.read_csv(
-        paths.barcodes, sep="\t", header=None, names=["barcode"],
-        dtype=str, compression="infer",
+        paths.barcodes,
+        sep="\t",
+        header=None,
+        names=["barcode"],
+        dtype=str,
+        compression="infer",
     )["barcode"].to_numpy()
     features = _read_features(paths.features)
 
@@ -226,6 +267,7 @@ def _read_one_gene_sample(
         keep = np.asarray(pd.Index(barcodes).isin(wl_set), dtype=bool)
         if not keep.any():
             import warnings
+
             warnings.warn(
                 f"Gene sample {sample_id!r}: whitelist intersection is empty; "
                 "this sample contributes 0 cells.",
@@ -256,6 +298,8 @@ def _read_one_gene_sample(
         spatial=spatial_aligned,
         library_id=resolved.library_id,
         whitelist_source=resolved.source,
+        matrix_source=paths.source_dir.name,
+        matrix_file=paths.matrix.name,
     )
 
 
@@ -303,7 +347,8 @@ def _concat_gene_samples(
         else:
             local_to_global = np.fromiter(
                 (gid_to_global[str(g)] for g in art.features["gene_id"]),
-                dtype=np.int64, count=len(art.features),
+                dtype=np.int64,
+                count=len(art.features),
             )
             # mtx is cells × local_genes; need cells × n_global.
             coo = art.mtx.tocoo()
@@ -314,10 +359,14 @@ def _concat_gene_samples(
                     shape=(n_cells, n_global),
                 ).tocsc()
             )
-        obs_rows.append(pd.DataFrame({
-            "barcode": art.barcodes,
-            "sample_id": np.full(n_cells, sid, dtype=object),
-        }))
+        obs_rows.append(
+            pd.DataFrame(
+                {
+                    "barcode": art.barcodes,
+                    "sample_id": np.full(n_cells, sid, dtype=object),
+                }
+            )
+        )
         if art.spatial is not None:
             sp_df = art.spatial.reset_index(drop=False).copy()
             # ``art.spatial`` was reindexed to ``art.barcodes`` so the index
@@ -337,8 +386,11 @@ def _concat_gene_samples(
         X = sp.vstack(remapped, format="csr").tocsc().astype(np.float64)
     else:
         X = sp.csc_matrix((0, n_global), dtype=np.float64)
-    obs = pd.concat(obs_rows, axis=0, ignore_index=True) if obs_rows else \
-        pd.DataFrame({"barcode": [], "sample_id": []})
+    obs = (
+        pd.concat(obs_rows, axis=0, ignore_index=True)
+        if obs_rows
+        else pd.DataFrame({"barcode": [], "sample_id": []})
+    )
     obs["sample_id"] = obs["sample_id"].astype("category")
     obs.index = pd.Index(
         [f"{bc}-{sid}" for bc, sid in zip(obs["barcode"], obs["sample_id"], strict=True)]
@@ -354,26 +406,28 @@ def _concat_gene_samples(
         # Symbols can collide; legal here (no LJV suffix scheme).
         # We let the AnnData object do `var_names_make_unique()` after build.
     else:
-        raise ValueError(
-            f"var_names must be 'gene_ids' or 'gene_symbols', got {var_names!r}"
-        )
+        raise ValueError(f"var_names must be 'gene_ids' or 'gene_symbols', got {var_names!r}")
 
     # Spatial obs columns (stacked across all samples that had spatial).
     if spatial_obs_rows:
         sp_concat = pd.concat(spatial_obs_rows, axis=0, ignore_index=True)
         sp_concat["barcode"] = sp_concat["barcode"].astype(str)
         sp_concat["sample_id"] = sp_concat["sample_id"].astype(str)
-        obs_key = pd.DataFrame({
-            "barcode": obs["barcode"].astype(str).to_numpy(),
-            "sample_id": obs["sample_id"].astype(str).to_numpy(),
-        })
+        obs_key = pd.DataFrame(
+            {
+                "barcode": obs["barcode"].astype(str).to_numpy(),
+                "sample_id": obs["sample_id"].astype(str).to_numpy(),
+            }
+        )
         merged = obs_key.merge(sp_concat, on=["barcode", "sample_id"], how="left")
         obs["in_tissue"] = merged["in_tissue"].fillna(-1).astype(np.int8).to_numpy()
         obs["array_row"] = merged["array_row"].fillna(-1).astype(np.int32).to_numpy()
         obs["array_col"] = merged["array_col"].fillna(-1).astype(np.int32).to_numpy()
         spatial_arr = np.stack(
-            [merged["pxl_row_in_fullres"].to_numpy(dtype=np.float64),
-             merged["pxl_col_in_fullres"].to_numpy(dtype=np.float64)],
+            [
+                merged["pxl_row_in_fullres"].to_numpy(dtype=np.float64),
+                merged["pxl_col_in_fullres"].to_numpy(dtype=np.float64),
+            ],
             axis=1,
         )
         # Cells from non-spatial samples land as NaN; replace with -1.0 sentinel
@@ -394,6 +448,8 @@ def read_starsolo_gene(
     *,
     barcode_whitelists: Sequence[str | Path | Sequence[str] | None] | None = None,
     use_internal_whitelist: bool = True,
+    matrix_source: Literal["raw", "filtered", "auto"] = "raw",
+    matrix_file: str = "auto",
     var_names: Literal["gene_ids", "gene_symbols"] = "gene_ids",
     tissue_positions: Sequence[str | Path | None] | None = None,
     spatial_library_ids: Sequence[str | None] | None = None,
@@ -414,13 +470,27 @@ def read_starsolo_gene(
         becomes unparseable if the sample_id has an embedded hyphen.
     barcode_whitelists
         Per-sample whitelist of barcodes. ``None`` to fall back to internal
-        whitelist; otherwise a path or sequence. When provided, counts are
-        read from ``Gene/raw/`` (so barcodes outside ``filtered/`` are
-        captured) and intersected with the whitelist.
+        whitelist; otherwise a path or sequence. The default and ``"auto"``
+        matrix sources read from ``Gene/raw/`` when this is provided, so cells
+        outside ``filtered/`` can be captured. An explicit source selection is
+        always honored.
     use_internal_whitelist
-        When neither an external whitelist nor ``tissue_positions`` is
-        given, fall back to ``Solo.out/Gene/filtered/barcodes.tsv``. If
-        that file is missing, a warning is emitted.
+        When neither an external whitelist nor ``tissue_positions`` is given,
+        filter the selected matrix using
+        ``Solo.out/Gene/filtered/barcodes.tsv``. Matrix selection and barcode
+        filtering are independent. If the whitelist is missing, a warning is
+        emitted and all barcodes from the selected matrix are retained.
+    matrix_source
+        Directory below ``Solo.out/Gene`` from which matrix, barcode, and
+        feature files are read. The default, ``"raw"``, matches R splikit
+        2.3.3. ``"filtered"`` reads the already-filtered matrix. ``"auto"``
+        preserves scsplice 2.0.0 source selection: external/spatial whitelists
+        use raw, while other calls prefer filtered and fall back to raw.
+    matrix_file
+        Matrix Market filename inside the selected source directory. The
+        default, ``"auto"``, prefers ``UniqueAndMult-EM.mtx`` and falls back
+        to ``matrix.mtx``. Gzip-compressed variants are supported. Pass a
+        non-empty filename to force another STARsolo count matrix.
     var_names
         ``"gene_ids"`` (default) uses Ensembl/NCBI IDs (always unique);
         ``"gene_symbols"`` uses gene names. With symbols, the reader
@@ -430,7 +500,7 @@ def read_starsolo_gene(
     tissue_positions
         Per-sample optional path to a Space Ranger
         ``tissue_positions[_list].csv``. When provided, the file's
-        barcodes act as the whitelist (raw/ source) AND populate
+        barcodes act as the whitelist (raw by default) AND populate
         ``obs["in_tissue"]``, ``obs["array_row"]``, ``obs["array_col"]``,
         ``obsm["spatial"]``, and ``uns["spatial"][library_id]`` per the
         squidpy contract. Header (Space Ranger 2.x) and headerless v1
@@ -451,21 +521,24 @@ def read_starsolo_gene(
 
     Notes
     -----
-    Whitelist precedence per sample:
+    Whitelist precedence per sample, applied after matrix selection:
 
-    1. ``tissue_positions[i]`` (read raw/, intersect)
-    2. ``barcode_whitelists[i]`` (read raw/, intersect)
-    3. ``use_internal_whitelist=True`` and filtered/ exists (read filtered/)
-    4. otherwise raw/ unfiltered
+    1. ``tissue_positions[i]`` (intersect the selected matrix)
+    2. ``barcode_whitelists[i]`` (intersect the selected matrix)
+    3. ``use_internal_whitelist=True`` and filtered/ exists (intersect with its barcodes)
+    4. otherwise retain all barcodes from the selected matrix
 
     The reader does not run ``min_counts`` filtering — gene expression
     workflows have their own QC (e.g. ``scanpy.pp.calculate_qc_metrics``).
+    Raw matrices can be substantially larger than filtered matrices; select
+    ``matrix_source="filtered"`` when EM counts are not required and memory is
+    constrained.
 
     Validated against STARsolo 2.7.10+ and Cell Ranger 6/7/8 features.tsv
     (3-col); 2-col v2 features.tsv is supported via the column-count
     dispatch in ``_read_features``.
     """
-    if isinstance(sample_dirs, (str, Path)):
+    if isinstance(sample_dirs, str | Path):
         sample_dirs = [sample_dirs]
     if isinstance(sample_ids, str):
         sample_ids = [sample_ids]
@@ -474,8 +547,7 @@ def read_starsolo_gene(
 
     if len(sample_dirs) != len(sample_ids):
         raise ValueError(
-            f"len(sample_dirs)={len(sample_dirs)} must equal "
-            f"len(sample_ids)={len(sample_ids)}"
+            f"len(sample_dirs)={len(sample_dirs)} must equal len(sample_ids)={len(sample_ids)}"
         )
     if len(sample_dirs) == 0:
         raise ValueError("At least one sample_dir / sample_id pair is required.")
@@ -489,6 +561,12 @@ def read_starsolo_gene(
             f"{{barcode}}-{{sample_id}}' so embedded hyphens make the suffix "
             f"ambiguous to parse). Offending sample_ids: {bad_sid}"
         )
+    if matrix_source not in ("raw", "filtered", "auto"):
+        raise ValueError(
+            f"matrix_source must be 'raw', 'filtered', or 'auto', got {matrix_source!r}"
+        )
+    if not isinstance(matrix_file, str) or not matrix_file:
+        raise ValueError("matrix_file must be a single non-empty filename")
 
     n = len(sample_dirs)
     bcw = normalize_per_sample_arg(barcode_whitelists, n, name="barcode_whitelists")
@@ -499,17 +577,22 @@ def read_starsolo_gene(
     for sd, sid, bw, tps, lib in zip(sample_dirs, sample_ids, bcw, tp, libs, strict=True):
         artifacts.append(
             _read_one_gene_sample(
-                sd, sid,
+                sd,
+                sid,
                 barcode_whitelist=bw,
                 tissue_positions=tps,
                 use_internal_whitelist=use_internal_whitelist,
+                matrix_source=matrix_source,
+                matrix_file=matrix_file,
                 spatial_library_id=lib,
                 verbose=verbose,
             )
         )
 
     X, var, obs, spatial_uns, spatial_arr = _concat_gene_samples(
-        artifacts, sample_ids, var_names=var_names,
+        artifacts,
+        sample_ids,
+        var_names=var_names,
     )
 
     adata = ad.AnnData(X=X, obs=obs, var=var)
@@ -524,6 +607,10 @@ def read_starsolo_gene(
                 "n_samples": n,
                 "var_names": var_names,
                 "use_internal_whitelist": bool(use_internal_whitelist),
+                "matrix_source": matrix_source,
+                "matrix_file": matrix_file,
+                "resolved_matrix_sources": [a.matrix_source for a in artifacts],
+                "resolved_matrix_files": [a.matrix_file for a in artifacts],
                 "any_explicit_whitelist": any(b is not None for b in bcw),
                 "any_tissue_positions": any(t is not None for t in tp),
             }

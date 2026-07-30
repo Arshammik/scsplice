@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-07-30
+
+### Added
+
+- `scs.io.read_starsolo_gene` now accepts independent `matrix_source` and
+  `matrix_file` controls, including STARsolo `UniqueAndMult-EM.mtx` and gzip
+  variants. Resolved per-sample inputs are recorded in AnnData metadata.
+- `scs.tl.pseudo_correlation` now computes per-event null means, null standard
+  deviations, valid-draw counts, two-sided empirical p-values, and
+  Benjamini-Hochberg adjusted p-values.
+- `scs.tl.get_pseudo_correlation_result` materializes export-ready per-event
+  statistics and long event/permutation null tables from AnnData.
+
+### Changed
+
+- The gene reader now defaults to `matrix_source="raw"` and prefers
+  `UniqueAndMult-EM.mtx` before falling back to `matrix.mtx`. Internal filtered
+  barcodes are applied independently to the selected count matrix.
+- Pseudo-correlation now runs 100 permutations by default, matching R splikit
+  2.3.2. Pass `n_permutations=0` for observed-only computation.
+
+[2.0.1]: https://github.com/Arshammik/scsplice/compare/v2.0.0...v2.0.1
+
 ## [2.0.0] - 2026-05-11
 
 ### Breaking Changes

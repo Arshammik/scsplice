@@ -16,11 +16,12 @@ Single-cell alternative-splicing analysis for the [scverse](https://scverse.org)
 | Function | Module | Purpose |
 |---|---|---|
 | `read_starsolo` | `scsplice.io` | Ingest STARsolo `Solo.out/SJ/` for one or more samples into a splicing AnnData. Supports `tissue_positions=` for Visium / spatial samples. |
-| `read_starsolo_gene` | `scsplice.io` | Ingest `Solo.out/Gene/` into a cell × gene AnnData with raw counts in `X`. Drop-in for `scanpy.pp.normalize_total` and `scvi-tools`. Supports `tissue_positions=` and squidpy `obsm["spatial"]`. |
+| `read_starsolo_gene` | `scsplice.io` | Ingest selectable raw/filtered `Solo.out/Gene/` matrices into a cell × gene AnnData. Defaults to raw EM counts with independent barcode filtering. |
 | `read_starsolo_velocyto` | `scsplice.io` | Ingest `Solo.out/Velocyto/` into an AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`. Handles both modern (split-file) and legacy (stacked `matrix.mtx`) STARsolo wire formats. Drop-in for `scvelo`. |
 | `make_m2` | `scsplice.tl` | Build the exclusion matrix M2 from M1 and LJV `group_id` (C++ kernel, OpenMP-parallel) |
 | `highly_variable_events` | `scsplice.pp` | Select highly variable splicing events via per-library binomial deviance |
-| `pseudo_correlation` | `scsplice.tl` | Per-event signed pseudo-R² (Cox-Snell / Nagelkerke) against an external predictor matrix |
+| `pseudo_correlation` | `scsplice.tl` | Per-event signed pseudo-R² with repeated permutation inference |
+| `get_pseudo_correlation_result` | `scsplice.tl` | Materialize export-ready statistics and long null-distribution tables |
 
 All three readers share the same `(sample_dirs, sample_ids)` call shape and produce AnnDatas with identical `obs_names`, making multi-modal pipelines a clean set-intersection.
 
@@ -53,14 +54,14 @@ See [Getting started](getting-started.md) for the full install and walkthrough.
 
 - **AnnData-native.** Junctions are `var`, cells are `obs`, M1 and M2 are `layers`. No custom objects — `scanpy`, `scvi-tools`, and the rest of the ecosystem work on the output without adapters.
 - **Bit-exact parity with R splikit.** M2 is bit-identical; HVE deviance agrees to `rtol=1e-10`; pseudo-correlation agrees to `rtol=1e-7`. The cross-language regression suite lives on the [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation).
-- **Two C++ kernels, one thin Python layer.** `make_m2` and `highly_variable_events` delegate to pybind11-wrapped Eigen kernels; the Python layer handles validation, AnnData conventions, and dispatch only.
+- **Compiled kernels, one thin Python layer.** Core numerical work delegates to pybind11-wrapped Eigen kernels; Python handles validation, permutation orchestration, AnnData conventions, and export views.
 - **Intentionally narrow scope.** HVG, plotting, and silhouette utilities are not included — `scanpy`, `pyranges`, and `sklearn` already cover those.
 
 ---
 
 ## Status
 
-v1.0. The six functions in the table above are the complete v1.0 API.
+v2.0.1. The table above is the supported public API.
 
 **R package:** [splikit (CRAN)](https://github.com/csglab/splikit) — same algorithm, R / AnnData-agnostic design.
 

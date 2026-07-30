@@ -57,7 +57,7 @@ type. `scsplice.io` ships one reader for each, with a consistent API shape.
 | Function                     | STARsolo source                                | Output shape                                                                      | Status |
 |---|---|---|---|
 | `scs.io.read_starsolo`      | `Solo.out/SJ/raw/` + `<sample_root>/SJ.out.tab` + `Solo.out/Gene/filtered/barcodes.tsv` (whitelist) | AnnData with `layers["M1"]`, `layers["M2"]`; events on `var`                       | **Implemented** |
-| `scs.io.read_starsolo_gene` | `Solo.out/Gene/{raw,filtered}/`                 | AnnData with raw counts in `X` (single matrix); genes on `var`                    | **Implemented** (`src/scsplice/io/_starsolo_gene.py`) |
+| `scs.io.read_starsolo_gene` | `Solo.out/Gene/{raw,filtered}/`                 | AnnData with selected counts in `X` (raw EM-first by default); genes on `var`     | **Implemented** (`src/scsplice/io/_starsolo_gene.py`) |
 | `scs.io.read_starsolo_velocyto` | `Solo.out/Velocyto/raw/`                    | AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`; genes on `var` | **Implemented** (`src/scsplice/io/_starsolo_velocyto.py`) |
 
 All three share:
@@ -172,6 +172,18 @@ paired companion measurement on the same axis. Drop-in for
 `scanpy.pp.normalize_total`, `scanpy.pp.highly_variable_genes`,
 `scvi-tools.SCVI`, etc.
 
+**Matrix selection is independent from barcode filtering.** The default
+`matrix_source="raw", matrix_file="auto"` prefers
+`raw/UniqueAndMult-EM.mtx` and falls back to `raw/matrix.mtx`. With
+`use_internal_whitelist=True`, the selected raw matrix is subsequently
+intersected with `filtered/barcodes.tsv`. Reading
+`matrix_source="filtered"` instead uses the already-filtered matrix directly.
+The compatibility source `"auto"` preserves scsplice 2.0.0 behavior: an
+external/spatial whitelist selects raw, while other calls prefer filtered and
+fall back to raw. All matrix choices also accept `.gz` variants. Because raw
+matrices can be substantially larger, memory-constrained workflows that do not
+need EM counts should explicitly select `matrix_source="filtered"`.
+
 **Choice of `var_names`:** default to `gene_id` (Ensembl IDs are stable and
 unique). `gene_name` (symbols) goes in a sibling column; symbols are not
 guaranteed unique across the genome (e.g. `IGH@`) so they're poor `var_names`.
@@ -263,9 +275,10 @@ The `barcode_whitelists` argument is per-sample. Each entry is one of:
 - A `Sequence[str]` of raw barcodes.
 
 When `use_internal_whitelist=True` (default), missing slots fall back to
-`<sample_root>/Solo.out/Gene/filtered/barcodes.tsv` per sample. If neither an
-explicit whitelist nor the internal one is available, the reader falls back to
-the full barcode set in `Solo.out/<feature>/raw/barcodes.tsv`.
+`<sample_root>/Solo.out/Gene/filtered/barcodes.tsv` per sample. The whitelist
+is applied to whichever gene matrix was selected. If neither an explicit
+whitelist nor the internal one is available, the reader retains the full
+barcode set from the selected matrix.
 
 ### `min_counts` filter (where applicable)
 

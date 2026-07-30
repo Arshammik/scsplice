@@ -85,4 +85,4 @@ Each sample's junction matrix is fully loaded into memory before merging. For co
 | 10 | 5 000 | 80 000 | ~4 GB |
 | 50 | 5 000 | 120 000 | ~20 GB |
 
-If memory is a constraint, load samples individually, subset to high-quality junctions, then merge the subsets. The function does not support on-disk streaming; that is planned for v2.0.
+If memory is a constraint, load samples individually, subset to high-quality junctions, then merge the subsets. The function does not currently support on-disk streaming.

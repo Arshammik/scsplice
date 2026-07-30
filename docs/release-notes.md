@@ -1,5 +1,34 @@
 # Release notes
 
+## v2.0.1 (2026-07-30) — R splikit 2.3.2–2.3.3 parity
+
+### Gene-expression matrix selection
+
+`scs.io.read_starsolo_gene` now separates matrix selection from barcode
+filtering. The default reads `Gene/raw/UniqueAndMult-EM.mtx` when present,
+falls back to `Gene/raw/matrix.mtx`, and then applies the internal
+`Gene/filtered/barcodes.tsv` whitelist. Both uncompressed and `.gz` files are
+supported.
+
+Use `matrix_source="filtered"` to read an already-filtered matrix,
+`matrix_file="matrix.mtx"` to force standard unique-count input, or
+`matrix_source="auto"` to retain scsplice 2.0.0 source selection.
+
+### Repeated pseudo-correlation nulls and export
+
+`scs.tl.pseudo_correlation` now runs 100 permutations by default and stores the
+raw event-by-permutation matrix in `adata.varm["pseudo_correlation_null"]`.
+Per-event null means, sample standard deviations, valid counts, two-sided
+empirical p-values, and BH-adjusted p-values are stored as aligned `adata.var`
+columns. Pass `n_permutations=0` for observed-only computation.
+
+`scs.tl.get_pseudo_correlation_result(adata)` returns an export-friendly object
+with `statistics`, long `null_distribution`, and `metadata` components. The
+pooled long table is descriptive; empirical p-values use each event's own null
+draws.
+
+---
+
 ## v2.0.0 (2026-05-11) — package renamed scsplice
 
 **Breaking change:** The PyPI distribution name changes from `splikit-py` to `scsplice`.

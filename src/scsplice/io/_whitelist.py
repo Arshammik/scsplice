@@ -8,13 +8,14 @@ in strict precedence order *per sample*:
 2. ``barcode_whitelists[i]`` — explicit per-sample list / file / sequence.
 3. ``use_internal_whitelist=True`` — fall back to the STARsolo internal
    ``Solo.out/Gene/filtered/barcodes.tsv`` file when present.
-4. Otherwise — no whitelist; use the full ``raw/`` set.
+4. Otherwise — no whitelist; retain the full selected matrix barcode set.
 
-When (1) or (2) fires, the reader MUST source counts from ``raw/`` (a strict
-superset) and intersect with the supplied whitelist. The internal whitelist
-is, by definition, a subset of ``raw/``, so the intersection is a no-op for
-the gene reader (we just read filtered/ directly); SJ and Velocyto only
-have ``raw/`` to begin with.
+When (1) or (2) fires, the readers historically source counts from ``raw/``
+(a strict superset) and intersect with the supplied whitelist. The gene reader
+now selects its matrix independently: its default and compatibility ``auto``
+mode still use raw for external/spatial whitelists, while an explicit
+``matrix_source="filtered"`` can intentionally restrict the available cells.
+SJ and Velocyto only have ``raw/`` to begin with.
 
 This module is intentionally side-effect-free: it parses inputs into
 plain Python objects (sets of barcodes; spatial DataFrames). The reader
@@ -32,7 +33,6 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-
 
 __all__ = [
     "ResolvedWhitelist",
