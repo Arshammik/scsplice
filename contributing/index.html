@@ -1363,7 +1363,7 @@
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># brew install eigen                   # macOS</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Editable install with all development dependencies</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[test,docs]&quot;</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[test,docs]"</span>
 </span></code></pre></div>
 <p>The <code>scikit-build-core</code> backend compiles the C++ extension during <code>pip install</code>. Subsequent edits to Python files take effect immediately (no rebuild needed); edits to <code>.cpp</code> files require re-running <code>pip install -e .</code>.</p>
 <h2 id="running-the-tests">Running the tests<a class="headerlink" href="#running-the-tests" title="Permanent link">&para;</a></h2>
@@ -1374,7 +1374,7 @@
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pytest<span class="w"> </span>--cov<span class="o">=</span>scsplice<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Fast subset only</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;not slow&quot;</span><span class="w"> </span>-v
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>-k<span class="w"> </span><span class="s2">"not slow"</span><span class="w"> </span>-v
 </span></code></pre></div>
 <p>For cross-language equivalence regression against R splikit, see the <a href="https://github.com/Arshammik/scsplice/tree/validation"><code>validation</code> branch</a>.</p>
 <h2 id="building-the-docs-locally">Building the docs locally<a class="headerlink" href="#building-the-docs-locally" title="Permanent link">&para;</a></h2>
