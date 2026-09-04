@@ -1,0 +1,63 @@
+/* Custom CSS for gedipy documentation */
+
+/* API function signatures */
+.sig-name.descname {
+    font-weight: 600;
+}
+
+/* Make code blocks stand out */
+div.highlight pre {
+    font-size: 0.9em;
+}
+
+/* Style for autodoc member descriptions */
+dl.py.method dt,
+dl.py.function dt,
+dl.py.class dt {
+    background-color: var(--color-background-secondary);
+    padding: 0.5em;
+    border-radius: 0.25em;
+}
+
+/* Table styling */
+table.docutils {
+    width: 100%;
+}
+
+/* Admonition customization */
+.admonition.note {
+    border-left-color: var(--color-brand-primary);
+}
+
+.admonition.warning {
+    border-left-color: #ff9800;
+}
+
+.admonition.tip {
+    border-left-color: #4caf50;
+}
+
+/* Version badge styling */
+.versionadded,
+.versionchanged,
+.deprecated {
+    font-size: 0.85em;
+    padding: 0.25em 0.5em;
+    border-radius: 0.25em;
+}
+
+/* Module index styling */
+.modindex-jumpbox {
+    margin-bottom: 1em;
+}
+
+/* Parameter list styling */
+dl.field-list > dt {
+    font-weight: 600;
+}
+
+/* Returns section styling */
+.returns,
+.return-type {
+    font-style: italic;
+}
