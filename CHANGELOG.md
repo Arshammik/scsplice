@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-09-04
+
+### Added
+
+- `scs.pp.highly_variable_genes` — Seurat/R-splikit VST (variance-stabilizing
+  transformation) highly-variable-gene selection, porting R splikit's
+  `find_variable_genes(method = "vst")`. Requires the optional `scikit-misc`
+  dependency (`pip install "scsplice[hvg]"`); its `loess` binding wraps the
+  same netlib/Cleveland-Grosse Fortran/C code R's `stats::loess()` calls, so
+  results are numerically comparable to R, not just approximately similar —
+  verified against real R splikit 2.3.3 output to a max absolute difference
+  of 4.4e-15 across 500 genes (`tests/test_highly_variable_genes_vs_r.py`).
+  R splikit's other method, `sum_deviance`, is not ported (see the function
+  docstring for rationale). New C++ kernels `hvg_row_mean_var` and
+  `hvg_standardize_variance` in `_scsplice_cpp` back the non-loess passes.
+
+[2.1.0]: https://github.com/Arshammik/scsplice/compare/v2.0.1...v2.1.0
+
 ## [2.0.1] - 2026-07-30
 
 ### Added

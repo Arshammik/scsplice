@@ -59,13 +59,14 @@ The docs site is at `http://localhost:8000` after `mkdocs serve`.
 src/scsplice/
   io/          read_starsolo and STARsolo parsing internals
   tl/          make_m2, pseudo_correlation
-  pp/          highly_variable_events
+  pp/          highly_variable_events, highly_variable_genes
   pl/          (reserved for v2.0 plotting)
   _core/       validators, shared utilities
   _scsplice_cpp (pybind11 extension, built from src/cpp/)
 tests/
   test_make_m2.py
   test_highly_variable_events.py
+  test_highly_variable_genes.py
   test_pseudo_correlation.py
   test_read_starsolo.py
   test_settings.py

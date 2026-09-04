@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
-EXPECTED_VERSION = "2.0.1"
+EXPECTED_VERSION = "2.1.0"
 
 
 def test_package_imports():

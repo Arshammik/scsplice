@@ -1,6 +1,6 @@
 """scsplice: single-cell alternative-splicing analysis on AnnData.
 
-Public API surface (v2.0.1):
+Public API surface (v2.1.0):
 
     scsplice.io.read_starsolo               # splicing (M1 / LJV-grouped)
     scsplice.io.read_starsolo_gene          # gene expression (X)
@@ -9,6 +9,7 @@ Public API surface (v2.0.1):
     scsplice.tl.pseudo_correlation
     scsplice.tl.get_pseudo_correlation_result
     scsplice.pp.highly_variable_events
+    scsplice.pp.highly_variable_genes     # requires the optional [hvg] extra
 """
 
 from importlib.metadata import PackageNotFoundError, version

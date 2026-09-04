@@ -20,6 +20,7 @@ Single-cell alternative-splicing analysis for the [scverse](https://scverse.org)
 | `read_starsolo_velocyto` | `scsplice.io` | Ingest `Solo.out/Velocyto/` into an AnnData with `layers["spliced"]`, `layers["unspliced"]`, `layers["ambiguous"]`. Handles both modern (split-file) and legacy (stacked `matrix.mtx`) STARsolo wire formats. Drop-in for `scvelo`. |
 | `make_m2` | `scsplice.tl` | Build the exclusion matrix M2 from M1 and LJV `group_id` (C++ kernel, OpenMP-parallel) |
 | `highly_variable_events` | `scsplice.pp` | Select highly variable splicing events via per-library binomial deviance |
+| `highly_variable_genes` | `scsplice.pp` | Select highly variable genes via Seurat/R-splikit VST (requires the `[hvg]` extra) |
 | `pseudo_correlation` | `scsplice.tl` | Per-event signed pseudo-R² with repeated permutation inference |
 | `get_pseudo_correlation_result` | `scsplice.tl` | Materialize export-ready statistics and long null-distribution tables |
 
@@ -55,13 +56,13 @@ See [Getting started](getting-started.md) for the full install and walkthrough.
 - **AnnData-native.** Junctions are `var`, cells are `obs`, M1 and M2 are `layers`. No custom objects — `scanpy`, `scvi-tools`, and the rest of the ecosystem work on the output without adapters.
 - **Bit-exact parity with R splikit.** M2 is bit-identical; HVE deviance agrees to `rtol=1e-10`; pseudo-correlation agrees to `rtol=1e-7`. The cross-language regression suite lives on the [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation).
 - **Compiled kernels, one thin Python layer.** Core numerical work delegates to pybind11-wrapped Eigen kernels; Python handles validation, permutation orchestration, AnnData conventions, and export views.
-- **Intentionally narrow scope.** HVG, plotting, and silhouette utilities are not included — `scanpy`, `pyranges`, and `sklearn` already cover those.
+- **Intentionally narrow scope.** Plotting and silhouette utilities, and R splikit's `sum_deviance` HVG method, are not included — `scanpy`, `pyranges`, and `sklearn` already cover that ground.
 
 ---
 
 ## Status
 
-v2.0.1. The table above is the supported public API.
+v2.1.0. The table above is the supported public API.
 
 **R package:** [splikit (CRAN)](https://github.com/csglab/splikit) — same algorithm, R / AnnData-agnostic design.
 

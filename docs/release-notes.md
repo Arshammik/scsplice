@@ -1,5 +1,27 @@
 # Release notes
 
+## v2.1.0 (2026-09-04) — highly_variable_genes (VST)
+
+### New: gene-level HVG selection
+
+`scs.pp.highly_variable_genes` ports R splikit's
+`find_variable_genes(method = "vst")` — Seurat-style variance-stabilizing
+transformation (Hafemeister & Satija, 2019). It fits a per-gene
+mean-variance trend and returns each gene's clipped, standardized residual
+variance in `adata.var["standardize_variance"]`.
+
+Requires the optional `scikit-misc` dependency: `pip install "scsplice[hvg]"`.
+Its `loess` binding wraps the same netlib/Cleveland-Grosse Fortran/C code
+R's `stats::loess()` calls (matching defaults: `degree=2`,
+`family="gaussian"`, `surface="interpolate"`, `cell=0.2`), so results are
+genuinely numerically comparable to R rather than an approximation —
+verified against real R splikit 2.3.3 output to a max absolute difference
+of `4.4e-15` across 500 genes.
+
+R splikit's other method, `sum_deviance`, is not ported; it has no
+R-specific numerics and is already covered by `scanpy.pp.highly_variable_genes`
+if needed.
+
 ## v2.0.1 (2026-07-30) — R splikit 2.3.2–2.3.3 parity
 
 ### Gene-expression matrix selection

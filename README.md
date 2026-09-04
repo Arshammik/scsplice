@@ -23,7 +23,7 @@ Single-cell alternative-splicing analysis for the [scverse](https://scverse.org)
 
 ## Status
 
-v2.0.1 keeps a deliberately focused API:
+v2.1.0 keeps a deliberately focused API:
 
 - `scs.io.read_starsolo` — ingest STARsolo `Solo.out/SJ/` for one or more samples.
 - `scs.tl.make_m2` — build the exclusion matrix from M1 + LJV grouping.
@@ -31,8 +31,11 @@ v2.0.1 keeps a deliberately focused API:
 - `scs.io.read_starsolo_gene` — read raw or filtered gene counts, including STARsolo EM matrices.
 - `scs.tl.pseudo_correlation` — beta-binomial Cox-Snell / Nagelkerke pseudo-R² with event-wise permutation inference.
 - `scs.tl.get_pseudo_correlation_result` — materialize export-ready statistics and long null tables.
+- `scs.pp.highly_variable_genes` — Seurat/R-splikit variance-stabilizing-transformation (VST) HVG selection (`pip install "scsplice[hvg]"`).
 
-HVG, plotting, and silhouette utilities from the R package are intentionally omitted — `scanpy`, `pyranges`, and `sklearn` already cover those.
+Plotting and silhouette utilities from the R package, and R splikit's other
+HVG method (`sum_deviance`), are intentionally omitted — `scanpy`, `pyranges`,
+and `sklearn` already cover that ground.
 
 ## Installation
 
@@ -131,9 +134,19 @@ applies the internal filtered-barcode whitelist. Use
 
 `scsplice` reproduces R `splikit` results to a documented tolerance on a
 fixed reference dataset (M2 bit-exact; HVE deviance `rtol=1e-10`;
-pseudo-correlation `rtol=1e-7`). The cross-language regression suite,
-R reference fixtures, and end-to-end M1/M2 validation pipeline live on the
+pseudo-correlation `rtol=1e-7`; HVG `standardize_variance` `rtol=1e-6`). The
+M1/M2/HVE/pseudo-correlation cross-language regression suite and R reference
+fixtures live on the
 [`validation` branch](https://github.com/Arshammik/scsplice/tree/validation).
+The `highly_variable_genes` (VST) equivalence test lives on `main`
+(`tests/test_highly_variable_genes_vs_r.py`) and is skipped automatically
+until its fixture is regenerated via `Rscript
+tests/r_export/export_hvg_reference.R` — see that script's header and
+`tests/load_hvg_r_ref.py`. Its loess step uses
+[`scikit-misc`](https://github.com/has2k1/scikit-misc)'s `loess` binding,
+which wraps the same netlib/Cleveland-Grosse Fortran/C code R's
+`stats::loess()` calls, so the equivalence is genuine rather than a
+from-scratch approximation.
 
 ## Documentation
 

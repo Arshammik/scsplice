@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "scsplice"
-version = "2.0.1"
+version = "2.1.0"
 description = "Single-cell alternative-splicing analysis on AnnData (Python port of R splikit)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,10 +33,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+hvg = [
+    # skmisc.loess wraps the same netlib/Cleveland-Grosse loess Fortran code
+    # that R's stats::loess() calls, which is what gives
+    # scsplice.pp.highly_variable_genes(method="vst") genuine (not merely
+    # approximate) numerical parity with R splikit's find_variable_genes().
+    "scikit-misc>=0.5",
+]
 test = [
     "pytest>=8.0",
     "pytest-cov",
     "pytest-xdist",
+    "scikit-misc>=0.5",
 ]
 docs = [
     "mkdocs>=1.6",
@@ -47,7 +55,7 @@ docs = [
     "mike>=2.1",
 ]
 dev = [
-    "scsplice[test,docs]",
+    "scsplice[test,docs,hvg]",
     "ruff",
     "pre-commit",
 ]
