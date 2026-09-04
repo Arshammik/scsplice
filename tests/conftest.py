@@ -61,6 +61,28 @@ def real_data_sample_ids() -> list[str]:
     return list(_REAL_DATA_SAMPLES)
 
 
+# R splikit HVG (vst) golden fixture; auto-skipped when absent. Regenerate
+# via `Rscript tests/r_export/export_hvg_reference.R` (requires R + splikit +
+# rhdf5). Override the path with SCSPLICE_HVG_R_REFERENCE.
+_HVG_R_REFERENCE_PATH = Path(
+    os.environ.get(
+        "SCSPLICE_HVG_R_REFERENCE",
+        Path(__file__).parent / "data" / "r_reference_hvg.h5",
+    )
+)
+
+
+@pytest.fixture(scope="session")
+def hvg_r_reference_path() -> Path:
+    if not _HVG_R_REFERENCE_PATH.is_file():
+        pytest.skip(
+            f"R HVG reference fixture not found at {_HVG_R_REFERENCE_PATH}; "
+            "regenerate via `Rscript tests/r_export/export_hvg_reference.R` "
+            "or set SCSPLICE_HVG_R_REFERENCE to an existing fixture."
+        )
+    return _HVG_R_REFERENCE_PATH
+
+
 @pytest.fixture
 def synthetic_splicing_adata():
     """Factory fixture: build a tiny well-formed splicing AnnData on demand.

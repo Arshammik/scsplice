@@ -23,6 +23,7 @@ pybind11_add_module(_scsplice_cpp
     make_m2.cpp
     deviance.cpp
     pseudo_r2.cpp
+    hvg_vst.cpp
 )
 
 target_link_libraries(_scsplice_cpp PRIVATE Eigen3::Eigen)

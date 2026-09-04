@@ -7,6 +7,7 @@
 #include <pybind11/stl.h>
 
 #include "deviance.hpp"
+#include "hvg_vst.hpp"
 #include "make_m2.hpp"
 #include "pseudo_r2.hpp"
 
@@ -43,5 +44,20 @@ PYBIND11_MODULE(_scsplice_cpp, m) {
           "cells layout (scipy.sparse.csc_matrix, float64) and match Z's shape. "
           "The Python wrapper enforces this on its side.\n\n"
           "Returns one scalar per event in [-1, 1] or NaN.",
+          py::call_guard<py::gil_scoped_release>());
+
+    m.def("hvg_row_mean_var", &scsplice::hvg_row_mean_var,
+          py::arg("X"), py::arg("n_threads") = 1,
+          "Per-row (gene) mean and population variance (including zeros) of a "
+          "sparse genes x cells matrix, scipy.sparse.csc_matrix float64.\n"
+          "Returns (mean, var), each length X.shape[0].",
+          py::call_guard<py::gil_scoped_release>());
+
+    m.def("hvg_standardize_variance", &scsplice::hvg_standardize_variance,
+          py::arg("X"), py::arg("mean"), py::arg("sd"), py::arg("n_threads") = 1,
+          "Seurat/R-splikit VST standardization pass: per-row clamped "
+          "z-score sum of squares, normalized by (n_cells - 1).\n"
+          "X is genes x cells (scipy.sparse.csc_matrix float64); mean/sd are "
+          "length X.shape[0] (pass sd=1.0 for rows with no fitted trend).",
           py::call_guard<py::gil_scoped_release>());
 }
