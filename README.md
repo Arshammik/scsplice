@@ -4,9 +4,7 @@
     <source media="(prefers-color-scheme: light)" srcset="docs/_static/scsplice-logotype-lightmood.svg">
     <img alt="MultiGEDI" src="docs/_static/multigedi-logo-light.svg" width="350">
   </picture>
-</div>
 
-<div align="center">
 
 
 
@@ -16,6 +14,7 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/test.yml?branch=main&label=tests&logo=github)](https://github.com/Arshammik/scsplice/actions/workflows/test.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/Arshammik/scsplice/docs.yml?branch=main&label=docs&logo=materialformkdocs&logoColor=white)](https://arshammik.github.io/scsplice/)
 
+</div>
 
 Single-cell alternative-splicing analysis for the [scverse](https://scverse.org) ecosystem.
 
