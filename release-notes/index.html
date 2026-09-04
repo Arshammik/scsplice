@@ -1134,6 +1134,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v210-2026-09-04-highly_variable_genes-vst" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.1.0 (2026-09-04) — highly_variable_genes (VST)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v2.1.0 (2026-09-04) — highly_variable_genes (VST)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-gene-level-hvg-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: gene-level HVG selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v201-2026-07-30-r-splikit-232233-parity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1323,6 +1351,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v210-2026-09-04-highly_variable_genes-vst" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.1.0 (2026-09-04) — highly_variable_genes (VST)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v2.1.0 (2026-09-04) — highly_variable_genes (VST)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-gene-level-hvg-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: gene-level HVG selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v201-2026-07-30-r-splikit-232233-parity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1479,6 +1535,23 @@
 
 
 <h1 id="release-notes">Release notes<a class="headerlink" href="#release-notes" title="Permanent link">&para;</a></h1>
+<h2 id="v210-2026-09-04-highly_variable_genes-vst">v2.1.0 (2026-09-04) — highly_variable_genes (VST)<a class="headerlink" href="#v210-2026-09-04-highly_variable_genes-vst" title="Permanent link">&para;</a></h2>
+<h3 id="new-gene-level-hvg-selection">New: gene-level HVG selection<a class="headerlink" href="#new-gene-level-hvg-selection" title="Permanent link">&para;</a></h3>
+<p><code>scs.pp.highly_variable_genes</code> ports R splikit's
+<code>find_variable_genes(method = "vst")</code> — Seurat-style variance-stabilizing
+transformation (Hafemeister &amp; Satija, 2019). It fits a per-gene
+mean-variance trend and returns each gene's clipped, standardized residual
+variance in <code>adata.var["standardize_variance"]</code>.</p>
+<p>Requires the optional <code>scikit-misc</code> dependency: <code>pip install "scsplice[hvg]"</code>.
+Its <code>loess</code> binding wraps the same netlib/Cleveland-Grosse Fortran/C code
+R's <code>stats::loess()</code> calls (matching defaults: <code>degree=2</code>,
+<code>family="gaussian"</code>, <code>surface="interpolate"</code>, <code>cell=0.2</code>), so results are
+genuinely numerically comparable to R rather than an approximation —
+verified against real R splikit 2.3.3 output to a max absolute difference
+of <code>4.4e-15</code> across 500 genes.</p>
+<p>R splikit's other method, <code>sum_deviance</code>, is not ported; it has no
+R-specific numerics and is already covered by <code>scanpy.pp.highly_variable_genes</code>
+if needed.</p>
 <h2 id="v201-2026-07-30-r-splikit-232233-parity">v2.0.1 (2026-07-30) — R splikit 2.3.2–2.3.3 parity<a class="headerlink" href="#v201-2026-07-30-r-splikit-232233-parity" title="Permanent link">&para;</a></h2>
 <h3 id="gene-expression-matrix-selection">Gene-expression matrix selection<a class="headerlink" href="#gene-expression-matrix-selection" title="Permanent link">&para;</a></h3>
 <p><code>scs.io.read_starsolo_gene</code> now separates matrix selection from barcode

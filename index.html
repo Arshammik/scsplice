@@ -1378,6 +1378,11 @@
 <td>Select highly variable splicing events via per-library binomial deviance</td>
 </tr>
 <tr>
+<td><code>highly_variable_genes</code></td>
+<td><code>scsplice.pp</code></td>
+<td>Select highly variable genes via Seurat/R-splikit VST (requires the <code>[hvg]</code> extra)</td>
+</tr>
+<tr>
 <td><code>pseudo_correlation</code></td>
 <td><code>scsplice.tl</code></td>
 <td>Per-event signed pseudo-R² with repeated permutation inference</td>
@@ -1411,11 +1416,11 @@
 <li><strong>AnnData-native.</strong> Junctions are <code>var</code>, cells are <code>obs</code>, M1 and M2 are <code>layers</code>. No custom objects — <code>scanpy</code>, <code>scvi-tools</code>, and the rest of the ecosystem work on the output without adapters.</li>
 <li><strong>Bit-exact parity with R splikit.</strong> M2 is bit-identical; HVE deviance agrees to <code>rtol=1e-10</code>; pseudo-correlation agrees to <code>rtol=1e-7</code>. The cross-language regression suite lives on the <a href="https://github.com/Arshammik/scsplice/tree/validation"><code>validation</code> branch</a>.</li>
 <li><strong>Compiled kernels, one thin Python layer.</strong> Core numerical work delegates to pybind11-wrapped Eigen kernels; Python handles validation, permutation orchestration, AnnData conventions, and export views.</li>
-<li><strong>Intentionally narrow scope.</strong> HVG, plotting, and silhouette utilities are not included — <code>scanpy</code>, <code>pyranges</code>, and <code>sklearn</code> already cover those.</li>
+<li><strong>Intentionally narrow scope.</strong> Plotting and silhouette utilities, and R splikit's <code>sum_deviance</code> HVG method, are not included — <code>scanpy</code>, <code>pyranges</code>, and <code>sklearn</code> already cover that ground.</li>
 </ul>
 <hr />
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>v2.0.1. The table above is the supported public API.</p>
+<p>v2.1.0. The table above is the supported public API.</p>
 <p><strong>R package:</strong> <a href="https://github.com/csglab/splikit">splikit (CRAN)</a> — same algorithm, R / AnnData-agnostic design.</p>
 <hr />
 <p><em>Brand note: the hexagonal seagull logo is the original R splikit artwork, shared between both packages to signal that the Python and R implementations are the same algorithm with a unified brand. In dark mode the logo is rendered on a white pill background so the black-on-white illustration remains legible against the dark site background.</em></p>
