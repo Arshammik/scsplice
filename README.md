@@ -1,4 +1,14 @@
-# scsplice
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/_static/scsplice-logotype-lightmood-1.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/_static/scsplice-logotype-lightmood.svg">
+    <img alt="MultiGEDI" src="docs/_static/multigedi-logo-light.svg" width="350">
+  </picture>
+</div>
+
+<div align="center">
+
+
 
 [![PyPI](https://img.shields.io/pypi/v/scsplice.svg?logo=pypi&logoColor=white)](https://pypi.org/project/scsplice/)
 [![Python versions](https://img.shields.io/pypi/pyversions/scsplice.svg?logo=python&logoColor=white)](https://pypi.org/project/scsplice/)
